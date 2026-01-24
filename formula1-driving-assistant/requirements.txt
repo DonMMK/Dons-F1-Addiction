@@ -2,6 +2,9 @@
 # Core F1 Data
 fastf1>=3.3.0
 
+# Scientific Computing
+scipy>=1.10.0
+
 # Visualization
 matplotlib>=3.7.0
 numpy>=1.24.0

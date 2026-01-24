@@ -33,7 +33,8 @@ Perfect for drivers wanting to improve in:
 - **Driving Zones Map** — Color-coded braking (red), acceleration (green), full throttle (blue)
 - **Speed Gradient Map** — Track colored by speed (slow=blue → fast=red)
 - **Telemetry Dashboard** — Speed trace, throttle/brake inputs, gear usage
-- **🆕 Animated Lap Replay** — Watch the car move through the track with real-time telemetry!
+- **Animated Lap Replay** — Watch the car move through the track with real-time telemetry!
+- **🆕 Ghost Car Comparison** — Compare two drivers' laps side-by-side with animated replay!
 
 ### 🔄 Corner-by-Corner Breakdown
 - Entry speed
@@ -103,6 +104,7 @@ formula1-driving-assistant/
 ├── data_loader.py       # FastF1 API wrapper, data processing, corner classification
 ├── track_visualizer.py  # Matplotlib visualizations
 ├── lap_replay.py        # Enhanced animated lap replay with car icon & status info
+├── ghost_comparison.py  # 🆕 Ghost car comparison with 2-driver lap analysis
 ├── requirements.txt     # Python dependencies
 ├── README.md           
 └── .fastf1_cache/       # Auto-created cache directory
@@ -156,6 +158,44 @@ Watch the lap unfold in real-time with our enhanced replay system:
   - GUI buttons for Play, Pause, Reset
   - Speed slider for precise control
 
+### 🆕 Ghost Car Comparison
+Compare two drivers' fastest laps head-to-head with our new ghost comparison feature:
+
+#### Track Analysis
+- **Color-coded track sections** showing who is faster where:
+  - Each driver's team color highlights sections where they are faster
+  - Example: Verstappen vs Norris = 🔵 Blue sections (Red Bull) vs 🟠 Orange sections (McLaren)
+  - Gray sections indicate equal pace
+
+#### Comparison Summary Plot
+Static analysis view with four panels:
+- **Track Advantage Map** — Track layout colored by who's faster in each section
+- **Speed Comparison** — Overlaid speed traces with shaded advantage areas
+- **Gap/Delta Chart** — Running time delta over the lap showing where time is gained/lost
+- **Mini-Sector Breakdown** — Bar chart of time deltas for each track segment
+
+#### Animated Ghost Replay
+Watch both cars race through the lap together:
+- **Two F1 car icons** — Each in their team color racing simultaneously
+- **Live gap display** — Real-time delta timer showing current gap
+- **Gap visualization bar** — Visual indicator of who's ahead and by how much
+- **Speed comparison** — Side-by-side speed readouts with delta
+- **Sector-by-sector timing** — Mini-sector times updating as cars progress
+- **Driver labels** — Color-coded labels above each car
+- **Trails** — Different colored trails behind each car
+- **Same controls as single-car replay**:
+  - `Space` — Play/Pause
+  - `R` — Reset
+  - `←/→` — Step through
+  - `+/-` — Adjust speed
+
+#### How to Use
+1. Select a session (Qualifying recommended for best comparison)
+2. Choose any driver from the list
+3. Select "👻 Ghost Car Comparison (2 Drivers)" from the visualization menu
+4. Pick your two drivers to compare
+5. Choose to view the static summary, animated replay, or both!
+
 ## 🔧 Configuration
 
 ### Adjusting Zone Detection
@@ -201,7 +241,7 @@ COLORS = {
 ## 🤝 Contributing
 
 Contributions welcome! Ideas for improvement:
-- [ ] Add lap comparison (overlay two drivers)
+- [x] ~~Add lap comparison (overlay two drivers)~~ ✅ Ghost Car Comparison added!
 - [ ] DRS zones visualization
 - [ ] Sector time breakdown
 - [ ] Export to video/animation

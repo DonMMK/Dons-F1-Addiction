@@ -45,6 +45,7 @@ from track_visualizer import (
     save_plot
 )
 from lap_replay import run_lap_replay
+from ghost_comparison import run_ghost_comparison, analyze_lap_comparison, create_comparison_summary_plot
 
 # Initialize rich console
 console = Console()
@@ -243,6 +244,7 @@ def select_visualization_mode() -> str:
         "📊 Full Telemetry Dashboard",
         "🌈 Speed Gradient Map",
         "🎬 Animated Lap Replay",
+        "👻 Ghost Car Comparison (2 Drivers)",
         "💾 Save All Visualizations",
         "← Back to driver selection"
     ]
@@ -264,24 +266,219 @@ def select_visualization_mode() -> str:
         return "speed"
     elif "Animated Lap Replay" in answer:
         return "replay"
+    elif "Ghost Car Comparison" in answer:
+        return "ghost"
     elif "Save All" in answer:
         return "save_all"
     
     return "zones"
 
 
+def select_two_drivers(session, event_name: str) -> Optional[tuple]:
+    """Prompt user to select two drivers for ghost comparison."""
+    drivers = get_all_drivers_fastest_laps(session)
+    
+    if len(drivers) < 2:
+        console.print("[red]Need at least 2 drivers with lap times for comparison.[/red]")
+        return None
+    
+    # Display driver times
+    table = Table(title=f"👻 Ghost Comparison - Select 2 Drivers - {event_name}", box=box.ROUNDED, style="cyan")
+    table.add_column("Pos", style="yellow", width=4)
+    table.add_column("Driver", style="white")
+    table.add_column("Team", style="dim")
+    table.add_column("Lap Time", style="green")
+    table.add_column("Gap", style="red")
+    
+    fastest_time = drivers[0]['lap_time_seconds']
+    for i, driver in enumerate(drivers[:20], 1):
+        gap = driver['lap_time_seconds'] - fastest_time
+        gap_str = f"+{gap:.3f}s" if gap > 0 else "---"
+        table.add_row(
+            str(i),
+            driver['driver'],
+            driver['team'],
+            driver['lap_time'],
+            gap_str
+        )
+    
+    console.print(table)
+    console.print()
+    
+    # Create choices for first driver
+    driver_choices = [f"{d['driver']} - {d['team']} ({d['lap_time']})" for d in drivers]
+    driver_choices.append("← Back")
+    
+    console.print("[cyan]Select the FIRST driver (their color will be shown on track sections where they're faster):[/cyan]")
+    answer1 = questionary.select(
+        "Driver 1:",
+        choices=driver_choices,
+        style=custom_style
+    ).ask()
+    
+    if answer1 is None or "Back" in answer1:
+        return None
+    
+    driver1 = answer1.split(" - ")[0]
+    
+    # Create choices for second driver (exclude first driver)
+    driver_choices_2 = [c for c in driver_choices if not c.startswith(driver1)]
+    
+    console.print(f"\n[cyan]Select the SECOND driver to compare against {driver1}:[/cyan]")
+    answer2 = questionary.select(
+        "Driver 2:",
+        choices=driver_choices_2,
+        style=custom_style
+    ).ask()
+    
+    if answer2 is None or "Back" in answer2:
+        return None
+    
+    driver2 = answer2.split(" - ")[0]
+    
+    # Get team info
+    team1 = next((d['team'] for d in drivers if d['driver'] == driver1), None)
+    team2 = next((d['team'] for d in drivers if d['driver'] == driver2), None)
+    
+    return (driver1, driver2, team1, team2)
+
+
 def run_analysis(year: int, round_number: int, session_type: str, 
-                 driver: Optional[str], viz_mode: str, event_name: str):
+                 driver: Optional[str], viz_mode: str, event_name: str,
+                 session=None, ghost_drivers: Optional[tuple] = None):
     """Run the full analysis and display visualizations."""
     
-    # Load session data
+    # Load session data if not provided
+    if session is None:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[cyan]Loading telemetry data (this may take a minute)...[/cyan]"),
+            console=console
+        ) as progress:
+            progress.add_task("loading", total=None)
+            session = load_session(year, round_number, session_type)
+    
+    # Handle ghost comparison mode separately
+    if viz_mode == "ghost" and ghost_drivers:
+        driver1, driver2, team1, team2 = ghost_drivers
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(f"[cyan]Loading telemetry for {driver1}...[/cyan]"),
+            console=console
+        ) as progress:
+            progress.add_task("loading", total=None)
+            telemetry1 = get_lap_telemetry(session, driver1)
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(f"[cyan]Loading telemetry for {driver2}...[/cyan]"),
+            console=console
+        ) as progress:
+            progress.add_task("loading", total=None)
+            telemetry2 = get_lap_telemetry(session, driver2)
+        
+        if telemetry1 is None or telemetry2 is None:
+            console.print("[red]Failed to load telemetry for one or both drivers.[/red]")
+            return
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[cyan]Analyzing lap comparison...[/cyan]"),
+            console=console
+        ) as progress:
+            progress.add_task("analyzing", total=None)
+            comparison = analyze_lap_comparison(
+                telemetry1, telemetry2,
+                driver1, driver2,
+                team1, team2
+            )
+            circuit_info = get_circuit_info(session)
+        
+        # Display comparison summary
+        delta = comparison.total_delta
+        faster = driver2 if delta > 0 else driver1
+        
+        summary_table = Table(title="👻 Ghost Comparison Analysis", box=box.ROUNDED, style="cyan")
+        summary_table.add_column("", style="white")
+        summary_table.add_column(driver1, style="cyan")
+        summary_table.add_column(driver2, style="magenta")
+        
+        min1 = int(comparison.driver1_time // 60)
+        sec1 = comparison.driver1_time % 60
+        min2 = int(comparison.driver2_time // 60)
+        sec2 = comparison.driver2_time % 60
+        
+        summary_table.add_row("Lap Time", f"{min1}:{sec1:06.3f}", f"{min2}:{sec2:06.3f}")
+        summary_table.add_row("Team", comparison.driver1_team, comparison.driver2_team)
+        
+        # Count segments where each driver is faster
+        d1_segments = sum(1 for s in comparison.segments if s.faster_driver == 0)
+        d2_segments = sum(1 for s in comparison.segments if s.faster_driver == 1)
+        
+        summary_table.add_row("Faster Segments", str(d1_segments), str(d2_segments))
+        
+        console.print(summary_table)
+        console.print()
+        
+        delta_str = f"+{abs(delta):.3f}s" if delta != 0 else "0.000s"
+        console.print(f"[green bold]🏆 {faster} is FASTER by {delta_str}[/green bold]")
+        console.print()
+        
+        # Ask what to show
+        viz_choices = [
+            "📊 Show Summary Plot (static analysis)",
+            "🎬 Start Ghost Replay Animation",
+            "📊 + 🎬 Show Both",
+            "← Back"
+        ]
+        
+        viz_answer = questionary.select(
+            "What would you like to see?",
+            choices=viz_choices,
+            style=custom_style
+        ).ask()
+        
+        if viz_answer is None or "Back" in viz_answer:
+            return
+        
+        title = f"{event_name} {year} - {driver1} vs {driver2} ({session_type})"
+        rotation = circuit_info.get('rotation', 0)
+        
+        show_summary = "Summary" in viz_answer or "Both" in viz_answer
+        show_replay = "Replay" in viz_answer or "Both" in viz_answer
+        
+        if show_summary:
+            console.print("[cyan]Generating comparison summary plot...[/cyan]")
+            fig = create_comparison_summary_plot(
+                telemetry1, telemetry2, comparison,
+                title=title, rotation=rotation
+            )
+            show_plot(fig)
+        
+        if show_replay:
+            console.print("[cyan]Starting ghost comparison replay...[/cyan]")
+            console.print("[dim]Controls: Space=Play/Pause | R=Reset | ←→=Step | +/-=Speed[/dim]")
+            console.print(f"[dim]Track sections colored by who is faster:[/dim]")
+            console.print(f"[dim]  • {comparison.driver1_color} = {driver1} faster[/dim]")
+            console.print(f"[dim]  • {comparison.driver2_color} = {driver2} faster[/dim]")
+            
+            from ghost_comparison import GhostComparisonReplay
+            replay = GhostComparisonReplay(
+                telemetry1, telemetry2, comparison,
+                title=title, rotation=rotation
+            )
+            replay.show()
+        
+        return
+    
+    # Normal single-driver analysis
     with Progress(
         SpinnerColumn(),
-        TextColumn("[cyan]Loading telemetry data (this may take a minute)...[/cyan]"),
+        TextColumn("[cyan]Loading telemetry data...[/cyan]"),
         console=console
     ) as progress:
         progress.add_task("loading", total=None)
-        session = load_session(year, round_number, session_type)
         telemetry = get_lap_telemetry(session, driver)
         lap_info = get_fastest_lap_info(session) if not driver else None
         circuit_info = get_circuit_info(session)
@@ -448,6 +645,13 @@ def main():
                         if viz_mode == "BACK":
                             break  # Back to driver selection
                         
+                        # Handle ghost comparison mode - need to select second driver
+                        ghost_drivers = None
+                        if viz_mode == "ghost":
+                            ghost_drivers = select_two_drivers(session, event['event_name'])
+                            if ghost_drivers is None:
+                                continue  # Back to visualization selection
+                        
                         # Run analysis
                         run_analysis(
                             year=year,
@@ -455,12 +659,14 @@ def main():
                             session_type=session_type,
                             driver=driver,
                             viz_mode=viz_mode,
-                            event_name=event['event_name']
+                            event_name=event['event_name'],
+                            session=session,
+                            ghost_drivers=ghost_drivers
                         )
                         
                         # Ask if user wants another visualization
                         if not questionary.confirm(
-                            "Generate another visualization for this lap?",
+                            "Generate another visualization?",
                             style=custom_style
                         ).ask():
                             break
