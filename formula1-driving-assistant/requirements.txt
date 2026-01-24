@@ -1,0 +1,15 @@
+# Formula 1 Driving Assistant - Dependencies
+# Core F1 Data
+fastf1>=3.3.0
+
+# Visualization
+matplotlib>=3.7.0
+numpy>=1.24.0
+PyQt5>=5.15.0  # For interactive matplotlib backend
+
+# CLI Interface
+rich>=13.0.0
+questionary>=2.0.0
+
+# Optional: Enhanced interactivity
+# arcade>=2.6.0  # Uncomment for game-style visualization

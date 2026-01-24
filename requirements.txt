@@ -1,0 +1,29 @@
+# F1 Tools - Combined Dependencies
+
+# Core F1 Data
+fastf1>=3.3.0
+
+# Machine Learning (for predictor)
+scikit-learn>=1.3.0
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.7.0
+numpy>=1.24.0
+PyQt5>=5.15.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Image Processing & Export
+pillow>=9.5.0
+
+# CLI Interface
+rich>=13.0.0
+questionary>=2.0.0
+
+# Notebooks
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# Progress bars
+tqdm>=4.65.0

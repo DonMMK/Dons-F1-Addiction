@@ -1,0 +1,24 @@
+# F1 Car Comparison Project - Requirements
+
+# Core FastF1 and Data Processing
+fastf1>=3.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Image Processing & Export
+pillow>=9.5.0
+
+# Optional: For animations (requires ffmpeg installed)
+# ffmpeg-python>=0.2.0
+
+# Optional: For interactive notebooks
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# Optional: Progress bars for long operations
+tqdm>=4.65.0
