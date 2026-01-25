@@ -394,6 +394,16 @@ def run_analysis(
             )
             return
 
+        # Load driving zones for both drivers (for corner info)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[cyan]Analyzing driving zones...[/cyan]"),
+            console=console,
+        ) as progress:
+            progress.add_task("analyzing", total=None)
+            zones1 = analyze_driving_zones(telemetry1)
+            zones2 = analyze_driving_zones(telemetry2)
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[cyan]Analyzing lap comparison...[/cyan]"),
@@ -401,7 +411,7 @@ def run_analysis(
         ) as progress:
             progress.add_task("analyzing", total=None)
             comparison = analyze_lap_comparison(
-                telemetry1, telemetry2, driver1, driver2, team1, team2
+                telemetry1, telemetry2, driver1, driver2, team1, team2, session
             )
             circuit_info = get_circuit_info(session)
 
@@ -483,7 +493,14 @@ def run_analysis(
             from ghost_comparison import GhostComparisonReplay
 
             replay = GhostComparisonReplay(
-                telemetry1, telemetry2, comparison, title=title, rotation=rotation
+                telemetry1,
+                telemetry2,
+                comparison,
+                session=session,
+                zones1=zones1,
+                zones2=zones2,
+                title=title,
+                rotation=rotation,
             )
             replay.show()
 

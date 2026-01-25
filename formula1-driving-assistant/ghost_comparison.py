@@ -33,6 +33,7 @@ import numpy as np
 from typing import Optional, Tuple, List, Dict, Any
 from dataclasses import dataclass
 from scipy import interpolate
+import colorsys
 
 from data_loader import (
     TelemetryData,
@@ -55,37 +56,255 @@ TEAM_COLORS = {
     "RB": "#6692FF",  # Renamed from AlphaTauri
     "Kick Sauber": "#52E252",
     "Alfa Romeo": "#C92D4B",
+    "Sauber": "#52E252",
     "Haas F1 Team": "#B6BABD",
     # Fallback
     "Unknown": "#888888",
 }
 
-# Driver to team mapping shortcuts
-DRIVER_TEAMS = {
-    "VER": "Red Bull Racing",
-    "PER": "Red Bull Racing",
-    "LEC": "Ferrari",
-    "SAI": "Ferrari",
-    "HAM": "Mercedes",
-    "RUS": "Mercedes",
-    "NOR": "McLaren",
-    "PIA": "McLaren",
-    "ALO": "Aston Martin",
-    "STR": "Aston Martin",
-    "OCO": "Alpine",
-    "GAS": "Alpine",
-    "ALB": "Williams",
-    "SAR": "Williams",
-    "COL": "Williams",
-    "TSU": "RB",
-    "RIC": "RB",
-    "LAW": "RB",
-    "BOT": "Kick Sauber",
-    "ZHO": "Kick Sauber",
-    "MAG": "Haas F1 Team",
-    "HUL": "Haas F1 Team",
-    "BEA": "Haas F1 Team",
+# Year-based driver to team mapping (2021-2026)
+# This handles driver transfers between teams
+DRIVER_TEAMS_BY_YEAR = {
+    2021: {
+        "VER": "Red Bull Racing",
+        "PER": "Red Bull Racing",
+        "HAM": "Mercedes",
+        "BOT": "Mercedes",
+        "RUS": "Williams",
+        "LEC": "Ferrari",
+        "SAI": "Ferrari",
+        "NOR": "McLaren",
+        "RIC": "McLaren",
+        "VET": "Aston Martin",
+        "STR": "Aston Martin",
+        "ALO": "Alpine",
+        "OCO": "Alpine",
+        "LAT": "Williams",
+        "ALB": "Williams",
+        "TSU": "AlphaTauri",
+        "GAS": "AlphaTauri",
+        "RAI": "Alfa Romeo",
+        "GIO": "Alfa Romeo",
+        "MSC": "Haas F1 Team",
+        "MAZ": "Haas F1 Team",
+    },
+    2022: {
+        "VER": "Red Bull Racing",
+        "PER": "Red Bull Racing",
+        "HAM": "Mercedes",
+        "RUS": "Mercedes",
+        "LEC": "Ferrari",
+        "SAI": "Ferrari",
+        "NOR": "McLaren",
+        "RIC": "McLaren",
+        "VET": "Aston Martin",
+        "STR": "Aston Martin",
+        "ALO": "Alpine",
+        "OCO": "Alpine",
+        "LAT": "Williams",
+        "ALB": "Williams",
+        "TSU": "AlphaTauri",
+        "GAS": "AlphaTauri",
+        "BOT": "Alfa Romeo",
+        "ZHO": "Alfa Romeo",
+        "MSC": "Haas F1 Team",
+        "MAG": "Haas F1 Team",
+    },
+    2023: {
+        "VER": "Red Bull Racing",
+        "PER": "Red Bull Racing",
+        "HAM": "Mercedes",
+        "RUS": "Mercedes",
+        "LEC": "Ferrari",
+        "SAI": "Ferrari",
+        "NOR": "McLaren",
+        "PIA": "McLaren",
+        "ALO": "Aston Martin",
+        "STR": "Aston Martin",
+        "GAS": "Alpine",
+        "OCO": "Alpine",
+        "ALB": "Williams",
+        "SAR": "Williams",
+        "TSU": "AlphaTauri",
+        "RIC": "AlphaTauri",
+        "LAW": "AlphaTauri",
+        "BOT": "Alfa Romeo",
+        "ZHO": "Alfa Romeo",
+        "MAG": "Haas F1 Team",
+        "HUL": "Haas F1 Team",
+    },
+    2024: {
+        "VER": "Red Bull Racing",
+        "PER": "Red Bull Racing",
+        "HAM": "Mercedes",
+        "RUS": "Mercedes",
+        "LEC": "Ferrari",
+        "SAI": "Ferrari",
+        "NOR": "McLaren",
+        "PIA": "McLaren",
+        "ALO": "Aston Martin",
+        "STR": "Aston Martin",
+        "GAS": "Alpine",
+        "OCO": "Alpine",
+        "ALB": "Williams",
+        "SAR": "Williams",
+        "COL": "Williams",
+        "TSU": "RB",
+        "RIC": "RB",
+        "LAW": "RB",
+        "BOT": "Kick Sauber",
+        "ZHO": "Kick Sauber",
+        "MAG": "Haas F1 Team",
+        "HUL": "Haas F1 Team",
+        "BEA": "Haas F1 Team",
+    },
+    2025: {
+        "VER": "Red Bull Racing",
+        "LAW": "Red Bull Racing",
+        "LEC": "Ferrari",
+        "HAM": "Ferrari",
+        "RUS": "Mercedes",
+        "ANT": "Mercedes",
+        "NOR": "McLaren",
+        "PIA": "McLaren",
+        "ALO": "Aston Martin",
+        "STR": "Aston Martin",
+        "GAS": "Alpine",
+        "DOO": "Alpine",
+        "SAI": "Williams",
+        "ALB": "Williams",
+        "TSU": "RB",
+        "HAD": "RB",
+        "HUL": "Kick Sauber",
+        "BOR": "Kick Sauber",
+        "BEA": "Haas F1 Team",
+        "OBE": "Haas F1 Team",
+    },
+    2026: {
+        "VER": "Red Bull Racing",
+        "LAW": "Red Bull Racing",
+        "LEC": "Ferrari",
+        "HAM": "Ferrari",
+        "RUS": "Mercedes",
+        "ANT": "Mercedes",
+        "NOR": "McLaren",
+        "PIA": "McLaren",
+        "ALO": "Aston Martin",
+        "STR": "Aston Martin",
+        "GAS": "Alpine",
+        "DOO": "Alpine",
+        "SAI": "Williams",
+        "ALB": "Williams",
+        "TSU": "RB",
+        "HAD": "RB",
+        "HUL": "Kick Sauber",
+        "BOR": "Kick Sauber",
+        "BEA": "Haas F1 Team",
+        "OBE": "Haas F1 Team",
+    },
 }
+
+# Fallback to latest year mapping for convenience
+DRIVER_TEAMS = DRIVER_TEAMS_BY_YEAR[2026]
+
+
+def get_driver_team_for_year(driver_code: str, year: int) -> str:
+    """
+    Get the team for a driver in a specific year.
+
+    Args:
+        driver_code: 3-letter driver code (e.g., "HAM", "VER")
+        year: Season year (2021-2026)
+
+    Returns:
+        Team name string, or "Unknown" if not found
+    """
+    if year in DRIVER_TEAMS_BY_YEAR:
+        return DRIVER_TEAMS_BY_YEAR[year].get(driver_code, "Unknown")
+    # Fallback to latest year
+    return DRIVER_TEAMS.get(driver_code, "Unknown")
+
+
+def differentiate_same_team_colors(
+    base_color: Tuple[int, int, int],
+) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
+    """
+    Create two distinct colors from a single team color for same-team driver comparisons.
+    Uses HSV color space to create a lighter and darker variant.
+
+    Args:
+        base_color: RGB tuple (0-255 range)
+
+    Returns:
+        Tuple of (lighter_rgb, darker_rgb) as (r, g, b) tuples in 0-255 range
+    """
+    # Normalize RGB to 0-1 range for colorsys
+    r, g, b = base_color[0] / 255.0, base_color[1] / 255.0, base_color[2] / 255.0
+
+    # Convert to HSV
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+
+    # Create lighter variant (increase value, decrease saturation slightly)
+    lighter_v = min(v * 1.4, 1.0)  # 40% brighter, capped at 1.0
+    lighter_s = s * 0.7  # Reduce saturation by 30%
+    lighter_r, lighter_g, lighter_b = colorsys.hsv_to_rgb(h, lighter_s, lighter_v)
+
+    # Create darker variant (decrease value, increase saturation slightly)
+    darker_v = v * 0.6  # 40% darker
+    darker_s = min(s * 1.2, 1.0)  # Increase saturation by 20%, capped at 1.0
+    darker_r, darker_g, darker_b = colorsys.hsv_to_rgb(h, darker_s, darker_v)
+
+    # Convert back to 0-255 range
+    lighter_rgb = (int(lighter_r * 255), int(lighter_g * 255), int(lighter_b * 255))
+    darker_rgb = (int(darker_r * 255), int(darker_g * 255), int(darker_b * 255))
+
+    return lighter_rgb, darker_rgb
+
+
+def get_dynamic_driver_info(
+    session, driver_code: str
+) -> Tuple[str, Tuple[int, int, int]]:
+    """
+    Dynamically fetch driver's team and color from FastF1 session data.
+    This handles cases where driver-team mappings are incomplete or outdated.
+
+    Args:
+        session: FastF1 session object
+        driver_code: 3-letter driver code
+
+    Returns:
+        Tuple of (team_name, color_rgb_tuple)
+    """
+    try:
+        # Try to get driver info from session
+        driver_info = session.get_driver(driver_code)
+        if driver_info is not None and hasattr(driver_info, "TeamName"):
+            team_name = driver_info["TeamName"]
+
+            # Get color from FastF1's plotting module
+            try:
+                from fastf1.plotting import get_driver_color
+
+                color_hex = get_driver_color(driver_code, session)
+                # Convert hex to RGB
+                color_hex = color_hex.lstrip("#")
+                color_rgb = tuple(int(color_hex[i : i + 2], 16) for i in (0, 2, 4))
+                return team_name, color_rgb
+            except:
+                pass
+    except:
+        pass
+
+    # Fallback to year-based mapping
+    year = session.event["EventDate"].year
+    team_name = get_driver_team_for_year(driver_code, year)
+
+    # Get color from TEAM_COLORS
+    team_color_hex = TEAM_COLORS.get(team_name, TEAM_COLORS["Unknown"])
+    color_hex = team_color_hex.lstrip("#")
+    color_rgb = tuple(int(color_hex[i : i + 2], 16) for i in (0, 2, 4))
+
+    return team_name, color_rgb
 
 
 @dataclass
@@ -177,6 +396,7 @@ def analyze_lap_comparison(
     driver2: str,
     team1: str = None,
     team2: str = None,
+    session=None,
     num_segments: int = 50,
 ) -> LapComparison:
     """
@@ -189,11 +409,46 @@ def analyze_lap_comparison(
         driver2: Second driver code
         team1: First driver's team
         team2: Second driver's team
+        session: FastF1 session object (optional, for dynamic team detection)
         num_segments: Number of track segments for comparison
 
     Returns:
         LapComparison object with full analysis
     """
+    # Get dynamic team and color information if session is provided
+    if session is not None:
+        team1_dyn, color1_rgb = get_dynamic_driver_info(session, driver1)
+        team2_dyn, color2_rgb = get_dynamic_driver_info(session, driver2)
+
+        # Use dynamic info if team wasn't provided
+        if team1 is None:
+            team1 = team1_dyn
+        if team2 is None:
+            team2 = team2_dyn
+    else:
+        # Fallback to static mapping
+        if team1 is None:
+            team1 = DRIVER_TEAMS.get(driver1, "Unknown")
+        if team2 is None:
+            team2 = DRIVER_TEAMS.get(driver2, "Unknown")
+
+        # Get colors from team
+        color1_hex = TEAM_COLORS.get(team1, TEAM_COLORS["Unknown"])
+        color2_hex = TEAM_COLORS.get(team2, TEAM_COLORS["Unknown"])
+        color1_hex = color1_hex.lstrip("#")
+        color2_hex = color2_hex.lstrip("#")
+        color1_rgb = tuple(int(color1_hex[i : i + 2], 16) for i in (0, 2, 4))
+        color2_rgb = tuple(int(color2_hex[i : i + 2], 16) for i in (0, 2, 4))
+
+    # Check if both drivers are from the same team
+    if team1 == team2 and team1 != "Unknown":
+        # Differentiate colors for same-team drivers
+        color1_rgb, color2_rgb = differentiate_same_team_colors(color1_rgb)
+
+    # Convert RGB tuples to hex strings for storage
+    color1_hex = "#{:02x}{:02x}{:02x}".format(*color1_rgb)
+    color2_hex = "#{:02x}{:02x}{:02x}".format(*color2_rgb)
+
     # Create common distance grid
     max_dist = min(telemetry1.distance.max(), telemetry2.distance.max())
     min_dist = max(telemetry1.distance.min(), telemetry2.distance.min())
@@ -281,17 +536,13 @@ def analyze_lap_comparison(
             }
         )
 
-    # Get colors
-    color1 = get_driver_color(driver1, team1)
-    color2 = get_driver_color(driver2, team2)
-
     return LapComparison(
         driver1=driver1,
         driver2=driver2,
-        driver1_team=team1 or DRIVER_TEAMS.get(driver1, "Unknown"),
-        driver2_team=team2 or DRIVER_TEAMS.get(driver2, "Unknown"),
-        driver1_color=color1,
-        driver2_color=color2,
+        driver1_team=team1,
+        driver2_team=team2,
+        driver1_color=color1_hex,
+        driver2_color=color2_hex,
         driver1_time=lap_time1,
         driver2_time=lap_time2,
         total_delta=total_delta,
@@ -365,6 +616,9 @@ class GhostComparisonReplay:
         telemetry1: TelemetryData,
         telemetry2: TelemetryData,
         comparison: LapComparison,
+        session=None,
+        zones1: DrivingZones = None,
+        zones2: DrivingZones = None,
         title: str = "Ghost Comparison",
         rotation: float = 0.0,
         fps: int = 30,
@@ -373,6 +627,9 @@ class GhostComparisonReplay:
         self.tel1_orig = telemetry1
         self.tel2_orig = telemetry2
         self.comparison = comparison
+        self.session = session
+        self.zones1 = zones1
+        self.zones2 = zones2
         self.title = title
         self.rotation = rotation
         self.fps = fps
@@ -411,6 +668,33 @@ class GhostComparisonReplay:
 
         # Build track segment colors
         self._build_segment_colors()
+
+        # Build corner lookup tables if zones provided
+        self.corner_lookup1 = None
+        self.corner_lookup2 = None
+        self.enhanced_corners1 = []
+        self.enhanced_corners2 = []
+
+        if session and zones1 and zones2:
+            try:
+                from data_loader import get_enhanced_corners
+
+                self.enhanced_corners1 = get_enhanced_corners(
+                    session, telemetry1, zones1.corner_zones
+                )
+                self.enhanced_corners2 = get_enhanced_corners(
+                    session, telemetry2, zones2.corner_zones
+                )
+                self.corner_lookup1 = self._build_corner_lookup(
+                    self.enhanced_corners1, telemetry1
+                )
+                self.corner_lookup2 = self._build_corner_lookup(
+                    self.enhanced_corners2, telemetry2
+                )
+            except Exception as e:
+                print(f"Warning: Could not load corner information: {e}")
+                self.corner_lookup1 = None
+                self.corner_lookup2 = None
 
         # Setup figure
         self._setup_figure()
@@ -471,6 +755,52 @@ class GhostComparisonReplay:
         while len(self.segment_colors) < self.num_points:
             self.segment_colors.append("#888888")
 
+    def _build_corner_lookup(self, corners, telemetry):
+        """Build a lookup structure for corner information by distance."""
+        lookup = {}
+        for corner in corners:
+            for dist_idx in range(corner.entry_idx, corner.exit_idx + 1):
+                if dist_idx < len(telemetry.distance):
+                    lookup[dist_idx] = corner
+        return lookup
+
+    def _get_corner_info_at_frame(self, frame_idx, telemetry_orig, corner_lookup):
+        """
+        Get corner information at current frame.
+        Returns (corner_info, phase) where phase is 'entry', 'apex', or 'exit'
+        """
+        if corner_lookup is None or frame_idx >= len(telemetry_orig.distance):
+            return None, None
+
+        # Map interpolated frame back to original telemetry index
+        # Use distance to find closest point in original telemetry
+        current_distance = self.common_distances[frame_idx]
+
+        # Find closest index in original telemetry
+        dist_diff = np.abs(telemetry_orig.distance - current_distance)
+        orig_idx = np.argmin(dist_diff)
+
+        if orig_idx in corner_lookup:
+            corner = corner_lookup[orig_idx]
+
+            # Determine phase
+            entry_dist = abs(orig_idx - corner.entry_idx)
+            apex_dist = abs(orig_idx - corner.apex_idx)
+            exit_dist = abs(orig_idx - corner.exit_idx)
+
+            min_dist = min(entry_dist, apex_dist, exit_dist)
+
+            if min_dist == apex_dist:
+                phase = "APEX"
+            elif min_dist == entry_dist:
+                phase = "ENTRY"
+            else:
+                phase = "EXIT"
+
+            return corner, phase
+
+        return None, None
+
     def _setup_figure(self):
         """Setup the matplotlib figure."""
         self.fig = plt.figure(figsize=(20, 12), facecolor="#1a1a2e")
@@ -478,10 +808,10 @@ class GhostComparisonReplay:
 
         # Grid layout
         gs = gridspec.GridSpec(
-            4,
+            5,
             6,
             figure=self.fig,
-            height_ratios=[0.12, 1, 0.25, 0.08],
+            height_ratios=[0.12, 1, 0.25, 0.15, 0.08],
             width_ratios=[2.5, 0.5, 0.5, 0.5, 0.5, 0.5],
             hspace=0.12,
             wspace=0.12,
@@ -512,8 +842,17 @@ class GhostComparisonReplay:
         self.ax_speed.set_facecolor("#252540")
         self.ax_speed.axis("off")
 
+        # Corner info panels - side by side for both drivers
+        self.ax_corner1 = self.fig.add_subplot(gs[3, :3])
+        self.ax_corner1.set_facecolor("#1a1a2e")
+        self.ax_corner1.axis("off")
+
+        self.ax_corner2 = self.fig.add_subplot(gs[3, 3:])
+        self.ax_corner2.set_facecolor("#1a1a2e")
+        self.ax_corner2.axis("off")
+
         # Progress bar
-        self.ax_progress = self.fig.add_subplot(gs[3, :4])
+        self.ax_progress = self.fig.add_subplot(gs[4, :4])
         self.ax_progress.set_facecolor("#1a1a2e")
 
         # Draw static elements
@@ -522,6 +861,7 @@ class GhostComparisonReplay:
         self._draw_delta_panel()
         self._setup_telemetry_display()
         self._setup_speed_display()
+        self._setup_corner_displays()
         self._setup_progress_bar()
 
         # Create dynamic elements
@@ -963,6 +1303,108 @@ class GhostComparisonReplay:
             ha="center",
         )
 
+    def _setup_corner_displays(self):
+        """Setup corner information display panels for both drivers."""
+        # Driver 1 corner panel
+        self.ax_corner1.set_xlim(0, 1)
+        self.ax_corner1.set_ylim(0, 1)
+
+        # Border/background for driver 1
+        self.ax_corner1.add_patch(
+            FancyBboxPatch(
+                (0.02, 0.1),
+                0.96,
+                0.8,
+                boxstyle="round,pad=0.02",
+                facecolor="#252540",
+                edgecolor=self.color1,
+                linewidth=2,
+                alpha=0.6,
+                transform=self.ax_corner1.transAxes,
+            )
+        )
+
+        # Driver 1 header
+        self.ax_corner1.text(
+            0.5,
+            0.85,
+            f"{self.comparison.driver1} - CORNER INFO",
+            color=self.color1,
+            fontsize=10,
+            fontweight="bold",
+            ha="center",
+        )
+
+        # Driver 1 corner text elements (will be updated dynamically)
+        self.corner1_name_text = self.ax_corner1.text(
+            0.5, 0.65, "---", color="white", fontsize=14, fontweight="bold", ha="center"
+        )
+        self.corner1_type_text = self.ax_corner1.text(
+            0.5, 0.50, "", color="#888888", fontsize=9, ha="center"
+        )
+        self.corner1_speeds_text = self.ax_corner1.text(
+            0.5,
+            0.30,
+            "",
+            color="white",
+            fontsize=8,
+            ha="center",
+            fontfamily="monospace",
+        )
+        self.corner1_gear_drs_text = self.ax_corner1.text(
+            0.5, 0.15, "", color="white", fontsize=8, ha="center"
+        )
+
+        # Driver 2 corner panel
+        self.ax_corner2.set_xlim(0, 1)
+        self.ax_corner2.set_ylim(0, 1)
+
+        # Border/background for driver 2
+        self.ax_corner2.add_patch(
+            FancyBboxPatch(
+                (0.02, 0.1),
+                0.96,
+                0.8,
+                boxstyle="round,pad=0.02",
+                facecolor="#252540",
+                edgecolor=self.color2,
+                linewidth=2,
+                alpha=0.6,
+                transform=self.ax_corner2.transAxes,
+            )
+        )
+
+        # Driver 2 header
+        self.ax_corner2.text(
+            0.5,
+            0.85,
+            f"{self.comparison.driver2} - CORNER INFO",
+            color=self.color2,
+            fontsize=10,
+            fontweight="bold",
+            ha="center",
+        )
+
+        # Driver 2 corner text elements (will be updated dynamically)
+        self.corner2_name_text = self.ax_corner2.text(
+            0.5, 0.65, "---", color="white", fontsize=14, fontweight="bold", ha="center"
+        )
+        self.corner2_type_text = self.ax_corner2.text(
+            0.5, 0.50, "", color="#888888", fontsize=9, ha="center"
+        )
+        self.corner2_speeds_text = self.ax_corner2.text(
+            0.5,
+            0.30,
+            "",
+            color="white",
+            fontsize=8,
+            ha="center",
+            fontfamily="monospace",
+        )
+        self.corner2_gear_drs_text = self.ax_corner2.text(
+            0.5, 0.15, "", color="white", fontsize=8, ha="center"
+        )
+
     def _setup_progress_bar(self):
         """Setup lap progress bar."""
         self.ax_progress.set_xlim(0, 100)
@@ -1228,6 +1670,9 @@ class GhostComparisonReplay:
                 self.sector_texts[i].set_color("#888888")
                 self.sector_texts[i].set_fontweight("normal")
 
+        # Update corner info for both drivers
+        self._update_corner_info(frame_idx)
+
         return [
             self.car1_patch,
             self.car2_patch,
@@ -1237,6 +1682,70 @@ class GhostComparisonReplay:
             self.speed1_text,
             self.speed2_text,
         ]
+
+    def _update_corner_info(self, frame_idx):
+        """Update corner information displays for both drivers."""
+        # Check if corner displays are set up
+        if not hasattr(self, "corner1_name_text") or self.corner1_name_text is None:
+            return
+
+        # Driver 1 corner info
+        corner1, phase1 = self._get_corner_info_at_frame(
+            frame_idx, self.tel1_orig, self.corner_lookup1
+        )
+
+        if corner1:
+            self.corner1_name_text.set_text(f"{corner1.name} - {phase1}")
+            self.corner1_type_text.set_text(
+                f"{corner1.corner_type} • {corner1.speed_class} • {corner1.direction}"
+            )
+
+            # Speeds
+            speeds_text = f"Entry: {corner1.entry_speed:.0f} km/h | Apex: {corner1.apex_speed:.0f} km/h | Exit: {corner1.exit_speed:.0f} km/h"
+            self.corner1_speeds_text.set_text(speeds_text)
+
+            # Gear and DRS at current position
+            gear1 = self.tel1.gear[frame_idx]
+            drs1 = "DRS ON" if self.tel1.drs[frame_idx] > 10 else "DRS OFF"
+            self.corner1_gear_drs_text.set_text(f"Gear: {gear1} | {drs1}")
+        else:
+            self.corner1_name_text.set_text("---")
+            self.corner1_type_text.set_text("")
+            self.corner1_speeds_text.set_text("")
+
+            # Still show current gear/DRS even without corner
+            gear1 = self.tel1.gear[frame_idx]
+            drs1 = "DRS ON" if self.tel1.drs[frame_idx] > 10 else "DRS OFF"
+            self.corner1_gear_drs_text.set_text(f"Gear: {gear1} | {drs1}")
+
+        # Driver 2 corner info
+        corner2, phase2 = self._get_corner_info_at_frame(
+            frame_idx, self.tel2_orig, self.corner_lookup2
+        )
+
+        if corner2:
+            self.corner2_name_text.set_text(f"{corner2.name} - {phase2}")
+            self.corner2_type_text.set_text(
+                f"{corner2.corner_type} • {corner2.speed_class} • {corner2.direction}"
+            )
+
+            # Speeds
+            speeds_text = f"Entry: {corner2.entry_speed:.0f} km/h | Apex: {corner2.apex_speed:.0f} km/h | Exit: {corner2.exit_speed:.0f} km/h"
+            self.corner2_speeds_text.set_text(speeds_text)
+
+            # Gear and DRS at current position
+            gear2 = self.tel2.gear[frame_idx]
+            drs2 = "DRS ON" if self.tel2.drs[frame_idx] > 10 else "DRS OFF"
+            self.corner2_gear_drs_text.set_text(f"Gear: {gear2} | {drs2}")
+        else:
+            self.corner2_name_text.set_text("---")
+            self.corner2_type_text.set_text("")
+            self.corner2_speeds_text.set_text("")
+
+            # Still show current gear/DRS even without corner
+            gear2 = self.tel2.gear[frame_idx]
+            drs2 = "DRS ON" if self.tel2.drs[frame_idx] > 10 else "DRS OFF"
+            self.corner2_gear_drs_text.set_text(f"Gear: {gear2} | {drs2}")
 
     def _animate(self, frame):
         """Animation frame callback."""
@@ -1573,9 +2082,14 @@ def run_ghost_comparison(
         team1 = None
         team2 = None
 
+    # Load driving zones for corner info
+    print("Analyzing driving zones...")
+    zones1 = analyze_driving_zones(telemetry1)
+    zones2 = analyze_driving_zones(telemetry2)
+
     print("Analyzing lap comparison...")
     comparison = analyze_lap_comparison(
-        telemetry1, telemetry2, driver1, driver2, team1, team2
+        telemetry1, telemetry2, driver1, driver2, team1, team2, session
     )
 
     # Print summary
@@ -1622,7 +2136,14 @@ def run_ghost_comparison(
     if show_replay:
         print("Starting ghost comparison replay...")
         replay = GhostComparisonReplay(
-            telemetry1, telemetry2, comparison, title=title, rotation=rotation
+            telemetry1,
+            telemetry2,
+            comparison,
+            session=session,
+            zones1=zones1,
+            zones2=zones2,
+            title=title,
+            rotation=rotation,
         )
         replay.show()
 
