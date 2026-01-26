@@ -72,3 +72,9 @@ Starting position matters, but *how much* depends on the track and the driver.
 ```bash
 python f1_predictor_v12.py --year 2026 --gp "Australia" --session Q
 ```
+
+### List Available Races
+
+```bash
+python -c "import fastf1; print(fastf1.get_event_schedule(2025)[['RoundNumber', 'Country', 'EventName']].to_string())"
+```
