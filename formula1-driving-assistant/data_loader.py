@@ -146,25 +146,47 @@ def get_season_schedule(year: int) -> List[Dict[str, Any]]:
         - country: str
         - circuit_name: str
         - date: str
+        - is_testing: bool (True for pre-season testing events)
+        - testing_number: int (1, 2, etc. for testing events, 0 for races)
     """
     try:
-        schedule = fastf1.get_event_schedule(year)
+        schedule = fastf1.get_event_schedule(year, include_testing=True)
         events = []
+        testing_count = 0
 
         for idx, row in schedule.iterrows():
-            # Skip testing events
-            if "test" in str(row.get("EventName", "")).lower():
+            event_format = str(row.get("EventFormat", "")).lower()
+            event_name = str(row.get("EventName", ""))
+
+            # Handle testing events
+            if event_format == "testing" or "test" in event_name.lower():
+                testing_count += 1
+                events.append(
+                    {
+                        "round_number": 0,  # Testing events use round 0
+                        "event_name": f"Pre-Season Testing {testing_count}",
+                        "country": row.get("Country", "Unknown"),
+                        "circuit_name": row.get("Location", "Unknown"),
+                        "date": str(row.get("EventDate", ""))[:10],
+                        "is_testing": True,
+                        "test_number": testing_count,
+                    }
+                )
                 continue
+
+            # Skip events without valid round numbers
             if pd.isna(row.get("RoundNumber")) or row.get("RoundNumber") == 0:
                 continue
 
             events.append(
                 {
                     "round_number": int(row["RoundNumber"]),
-                    "event_name": row["EventName"],
+                    "event_name": event_name,
                     "country": row.get("Country", "Unknown"),
-                    "circuit_name": row.get("Location", row["EventName"]),
+                    "circuit_name": row.get("Location", event_name),
                     "date": str(row.get("EventDate", ""))[:10],
+                    "is_testing": False,
+                    "test_number": 0,
                 }
             )
 
@@ -174,12 +196,23 @@ def get_season_schedule(year: int) -> List[Dict[str, Any]]:
         return []
 
 
-def get_session_types(year: int, round_number: int) -> List[str]:
+def get_session_types(year: int, round_number: int, test_number: int = 0) -> List[str]:
     """
     Get available session types for an event.
     Returns list like: ['FP1', 'FP2', 'FP3', 'Q', 'R'] or ['FP1', 'SQ', 'S', 'Q', 'R']
+    For testing events, returns ['T1', 'T2', 'T3'] for Test Day 1, 2, 3.
+
+    Args:
+        year: Season year
+        round_number: Race round number (0 for testing)
+        test_number: Testing event number (1, 2, etc.) if round_number is 0
     """
     try:
+        # Handle testing events
+        if round_number == 0 and test_number > 0:
+            # Testing events have Practice 1, 2, 3 which are Test Days
+            return ["T1", "T2", "T3"]
+
         event = fastf1.get_event(year, round_number)
         sessions = []
 
@@ -206,19 +239,46 @@ def get_session_types(year: int, round_number: int) -> List[str]:
         return ["Q", "R"]  # Default fallback
 
 
-def load_session(year: int, round_number: int, session_type: str = "Q"):
+def load_session(
+    year: int, round_number: int, session_type: str = "Q", test_number: int = None
+):
     """
     Load a FastF1 session with telemetry.
 
     Args:
         year: Season year
-        round_number: Race number in the season
-        session_type: 'FP1', 'FP2', 'FP3', 'Q', 'R', 'S', 'SQ'
+        round_number: Race number in the season (negative for testing events)
+        session_type: 'FP1', 'FP2', 'FP3', 'Q', 'R', 'S', 'SQ', or 'T1', 'T2', 'T3' for testing
+        test_number: For testing sessions, which test (1, 2, etc.)
 
     Returns:
         FastF1 Session object
     """
-    session = fastf1.get_session(year, round_number, session_type)
+    # Handle testing sessions
+    if test_number is not None or round_number < 0:
+        # Determine test number from round_number if not provided
+        if test_number is None:
+            test_number = abs(round_number)
+
+        # Map session type to session number (T1->1, T2->2, T3->3)
+        if session_type.startswith("T"):
+            session_number = int(session_type[1])
+        else:
+            # Also support Practice 1, 2, 3 format
+            session_map = {
+                "FP1": 1,
+                "FP2": 2,
+                "FP3": 3,
+                "Practice 1": 1,
+                "Practice 2": 2,
+                "Practice 3": 3,
+            }
+            session_number = session_map.get(session_type, 1)
+
+        session = fastf1.get_testing_session(year, test_number, session_number)
+    else:
+        session = fastf1.get_session(year, round_number, session_type)
+
     session.load(telemetry=True, weather=True, messages=False)
     return session
 

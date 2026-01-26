@@ -111,6 +111,10 @@ def select_event(year: int) -> Optional[Dict[str, Any]]:
         console.print("[red]No events found for this season.[/red]")
         return None
 
+    # Separate testing events from race events
+    testing_events = [e for e in events if e.get("is_testing", False)]
+    race_events = [e for e in events if not e.get("is_testing", False)]
+
     # Display events table
     table = Table(title=f"🗓️  {year} F1 Calendar", box=box.ROUNDED, style="cyan")
     table.add_column("#", style="dim", width=4)
@@ -119,7 +123,21 @@ def select_event(year: int) -> Optional[Dict[str, Any]]:
     table.add_column("Country", style="yellow")
     table.add_column("Date", style="dim")
 
-    for event in events:
+    # Add testing events first (if any)
+    for event in testing_events:
+        table.add_row(
+            "T" + str(event.get("test_number", "")),
+            f"🧪 {event['event_name']}",
+            event["circuit_name"],
+            event["country"],
+            event["date"],
+        )
+
+    # Add separator if there are both testing and race events
+    if testing_events and race_events:
+        table.add_row("─" * 4, "─" * 20, "─" * 15, "─" * 10, "─" * 10)
+
+    for event in race_events:
         table.add_row(
             str(event["round_number"]),
             event["event_name"],
@@ -131,11 +149,18 @@ def select_event(year: int) -> Optional[Dict[str, Any]]:
     console.print(table)
     console.print()
 
-    # Create choices
-    choices = [
-        f"{e['round_number']:02d}. {e['event_name']} ({e['circuit_name']})"
-        for e in events
-    ]
+    # Create choices - testing events first with special prefix
+    choices = []
+    for e in testing_events:
+        choices.append(
+            f"T{e.get('test_number', '')}. 🧪 {e['event_name']} ({e['circuit_name']})"
+        )
+
+    for e in race_events:
+        choices.append(
+            f"{e['round_number']:02d}. {e['event_name']} ({e['circuit_name']})"
+        )
+
     choices.append("← Back to season selection")
 
     answer = questionary.select(
@@ -145,12 +170,20 @@ def select_event(year: int) -> Optional[Dict[str, Any]]:
     if answer is None or "Back" in answer:
         return None
 
-    # Extract round number
-    round_num = int(answer.split(".")[0])
-    return next(e for e in events if e["round_number"] == round_num)
+    # Extract round number or testing identifier
+    prefix = answer.split(".")[0]
+    if prefix.startswith("T"):
+        # Testing event
+        test_num = int(prefix[1:])
+        return next(e for e in testing_events if e.get("test_number") == test_num)
+    else:
+        round_num = int(prefix)
+        return next(e for e in race_events if e["round_number"] == round_num)
 
 
-def select_session(year: int, round_number: int, event_name: str) -> Optional[str]:
+def select_session(
+    year: int, round_number: int, event_name: str, test_number: int = None
+) -> Optional[str]:
     """Prompt user to select a session type."""
     with Progress(
         SpinnerColumn(),
@@ -158,7 +191,7 @@ def select_session(year: int, round_number: int, event_name: str) -> Optional[st
         console=console,
     ) as progress:
         progress.add_task("loading", total=None)
-        sessions = get_session_types(year, round_number)
+        sessions = get_session_types(year, round_number, test_number=test_number)
 
     session_names = {
         "FP1": "Free Practice 1",
@@ -169,6 +202,9 @@ def select_session(year: int, round_number: int, event_name: str) -> Optional[st
         "SS": "Sprint Shootout",
         "S": "Sprint Race",
         "R": "Race",
+        "T1": "Testing Session 1",
+        "T2": "Testing Session 2",
+        "T3": "Testing Session 3",
     }
 
     choices = [f"{s} - {session_names.get(s, s)}" for s in sessions]
@@ -661,10 +697,20 @@ def main():
             if event is None:
                 break  # Back to season selection
 
+            # Check if this is a testing event
+            is_testing = event.get("is_testing", False)
+            test_number = event.get("test_number") if is_testing else None
+            # Ensure test_number is None for non-testing, not 0
+            if test_number == 0:
+                test_number = None
+
             while True:
                 # Session selection
                 session_type = select_session(
-                    year, event["round_number"], event["event_name"]
+                    year,
+                    event["round_number"],
+                    event["event_name"],
+                    test_number=test_number,
                 )
                 if session_type is None:
                     break  # Back to event selection
@@ -677,7 +723,12 @@ def main():
                     console=console,
                 ) as progress:
                     progress.add_task("loading", total=None)
-                    session = load_session(year, event["round_number"], session_type)
+                    session = load_session(
+                        year,
+                        event["round_number"],
+                        session_type,
+                        test_number=test_number,
+                    )
 
                 while True:
                     # Driver selection
