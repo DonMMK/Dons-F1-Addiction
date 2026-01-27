@@ -150,9 +150,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [FastF1](https://github.com/theOehrly/Fast-F1) for providing access to F1 telemetry data
 - Formula 1 for the incredible sport that fuels this addiction
-
+- GecklesTheClown 
 
 ## Alternatives 
 https://openf1.org/
 
 https://my.sportmonks.com/subscriptions/create/sport/2/plans
+
+
