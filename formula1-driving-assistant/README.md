@@ -1,6 +1,6 @@
-# 🏎️ F1 Driving Assistant
+# 🏎️ Formula Nerd Heaven
 
-> **Learn the racing line from the fastest F1 drivers** — A sim racing training tool that visualizes real Formula 1 telemetry data to help drivers improve their lap times.
+> **Dive deep into F1 telemetry like a true data addict** — An interactive tool that visualizes real Formula 1 telemetry data for racing enthusiasts.
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![FastF1](https://img.shields.io/badge/FastF1-3.3+-green.svg)
@@ -8,40 +8,75 @@
 
 ## 🎯 What Is This?
 
-F1 Driving Assistant is an interactive tool that fetches real Formula 1 telemetry data and visualizes it in a way that helps sim racers learn:
+Formula Nerd Heaven is an interactive tool that fetches real Formula 1 telemetry data and visualizes it in two powerful ways:
 
-- **Braking zones** — Where the pros hit the brakes and how hard
-- **Acceleration zones** — Where to get back on the throttle
-- **Corner analysis** — Entry speed, apex speed, exit speed, and gear selection
-- **Racing line** — The exact path taken by the fastest drivers
+- **🎬 Animated Lap Replay** — Watch a driver's fastest lap unfold in real-time with live telemetry
+- **👻 Ghost Car Comparison** — Compare two drivers' laps head-to-head with animated racing
 
-Perfect for drivers wanting to improve in:
-- F1 2024/25 (Codemasters)
-- Assetto Corsa / ACC
-- iRacing
-- Any sim with F1 tracks
+Perfect for F1 fans who want to understand what separates the fastest drivers!
 
 ## ✨ Features
 
-### 📊 Interactive Track Analysis
+### 📊 Interactive Analysis
 - Select any F1 track from 2018 onwards
 - Choose from Qualifying, Race, Sprint, or Practice sessions
 - Compare different drivers' laps
-- See gear usage at every corner
 
-### 🗺️ Track Visualizations
-- **Driving Zones Map** — Color-coded braking (red), acceleration (green), full throttle (blue)
-- **Speed Gradient Map** — Track colored by speed (slow=blue → fast=red)
-- **Telemetry Dashboard** — Speed trace, throttle/brake inputs, gear usage
-- **Animated Lap Replay** — Watch the car move through the track with real-time telemetry!
-- **🆕 Ghost Car Comparison** — Compare two drivers' laps side-by-side with animated replay!
+### 🎬 Animated Lap Replay
+Watch the lap unfold in real-time with our enhanced replay system:
+- **F1 Car Icon** — Realistic car shape rotating with the racing line
+- **Live telemetry** — Speed, Gear, Throttle %, Brake %
+- **Track Conditions Panel** — Weather, tire compound with color-coded indicator, tire age
+- **Driver Status Info Box** — Real-time updates showing:
+  - 🚀 **FULL THROTTLE** — Flat out on the straights
+  - ⬆️ **ACCELERATING** — Getting back on the power
+  - 🛑 **BRAKING** — Heavy braking zones
+  - ➡️ **COASTING** — Trail braking or lift-off
+  - 🔄 **CORNER** — Mid-corner
+  - ⬆️/⬇️ **GEAR UP/DOWN** — Gear change notifications
+  - 🟢 **DRS ACTIVE** — When DRS is deployed
+- **Corner Approach Info** — When approaching a corner:
+  - Corner name/number (e.g., "Turn 1", "Turn 4")
+  - Corner type: HAIRPIN, SWEEPER, 90 DEGREE, KINK
+  - Speed class: HIGH SPEED, MEDIUM SPEED, LOW SPEED
+  - Direction: LEFT ⟲ or RIGHT ⟳ with angle
+  - Phase: APPROACH → ENTRY → APEX → EXIT
+  - Speed targets: Entry/Apex/Exit speeds
+- **Input visualization** — Throttle/brake bars updating live
+- **Playback controls**:
+  - `Space` — Play/Pause
+  - `R` — Reset to start
+  - `←/→` — Step frame by frame
+  - `+/-` — Speed up/slow down (0.25x to 4x)
+  - GUI buttons for Play, Pause, Reset
+  - Speed slider for precise control
 
-### 🔄 Corner-by-Corner Breakdown
-- Entry speed
-- Apex speed  
-- Exit speed
-- Gear at apex
-- Braking point markers
+### 👻 Ghost Car Comparison
+Compare two drivers' fastest laps head-to-head:
+
+#### Track Analysis
+- **Color-coded track sections** showing who is faster where:
+  - Each driver's team color highlights sections where they are faster
+  - Example: Verstappen vs Norris = 🔵 Blue sections (Red Bull) vs 🟠 Orange sections (McLaren)
+  - Gray sections indicate equal pace
+
+#### Comparison Summary Plot
+Static analysis view with four panels:
+- **Track Advantage Map** — Track layout colored by who's faster in each section
+- **Speed Comparison** — Overlaid speed traces with shaded advantage areas
+- **Gap/Delta Chart** — Running time delta over the lap showing where time is gained/lost
+- **Mini-Sector Breakdown** — Bar chart of time deltas for each track segment
+
+#### Animated Ghost Replay
+Watch both cars race through the lap together:
+- **Two F1 car icons** — Each in their team color racing simultaneously
+- **Live gap display** — Real-time delta timer showing current gap
+- **Gap visualization bar** — Visual indicator of who's ahead and by how much
+- **Speed comparison** — Side-by-side speed readouts with delta
+- **Sector-by-sector timing** — Mini-sector times updating as cars progress
+- **Driver labels** — Color-coded labels above each car
+- **Trails** — Different colored trails behind each car
+- **Same controls as single-car replay**
 
 ## 🚀 Quick Start
 
@@ -70,12 +105,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
-This launches an interactive menu where you can:
-1. Select a season (2018-2026)
-2. Choose a track
-3. Pick a session (Qualifying, Race, etc.)
-4. Select a driver or use the pole lap
-5. Generate visualizations
+This launches an interactive menu where you:
+1. **Choose your mode first**: Lap Replay or Ghost Comparison
+2. Select a season (2018-2026)
+3. Choose a track
+4. Pick a session (Qualifying, Race, etc.)
+5. Select driver(s) based on your chosen mode
 
 #### Quick Test
 ```bash
@@ -83,16 +118,9 @@ python main.py --test
 ```
 Runs a quick demo with 2024 Bahrain GP qualifying data.
 
-#### Direct Mode
+#### Ghost Comparison via Command Line
 ```bash
-# Specific race and session
-python main.py --year 2024 --round 1 --session Q
-
-# Specific driver
-python main.py --year 2024 --round 1 --session Q --driver VER
-
-# Save to file
-python main.py --year 2024 --round 1 --session Q --save output.png
+python main.py --ghost --year 2024 --round 1 --driver1 VER --driver2 NOR
 ```
 
 ## 📁 Project Structure
@@ -103,134 +131,19 @@ formula1-driving-assistant/
 ├── cli.py               # Interactive menu interface
 ├── data_loader.py       # FastF1 API wrapper, data processing, corner classification
 ├── track_visualizer.py  # Matplotlib visualizations
-├── lap_replay.py        # Enhanced animated lap replay with car icon & status info
-├── ghost_comparison.py  # 🆕 Ghost car comparison with 2-driver lap analysis
+├── lap_replay.py        # Animated lap replay with car icon & status info
+├── ghost_comparison.py  # Ghost car comparison with 2-driver lap analysis
 ├── requirements.txt     # Python dependencies
 ├── README.md           
 └── .fastf1_cache/       # Auto-created cache directory
 ```
 
-## 🖼️ Visualization Examples
-
-### Track Map with Driving Zones
-Shows braking zones (red), acceleration zones (green), and full throttle sections (blue) overlaid on the track layout:
-
-```
-🔴 Red    = Heavy braking zone
-🟢 Green  = Acceleration / throttle application
-🔵 Blue   = Full throttle (100%)
-🟣 Purple = Corner apex markers with gear info
-```
-
-### Telemetry Dashboard
-Four-panel view showing:
-- Track overview with highlighted corners
-- Speed trace over lap distance
-- Throttle & brake inputs
-- Gear selection throughout the lap
-
-### 🆕 Animated Lap Replay
-Watch the lap unfold in real-time with our enhanced replay system:
-- **F1 Car Icon** — Realistic car shape instead of a simple dot, rotating with the racing line
-- **Live telemetry** — Speed, Gear, Throttle %, Brake %
-- **Track Conditions Panel** — Weather (temperature, humidity, wind), tire compound with color-coded indicator, tire age
-- **Driver Status Info Box** — Real-time updates showing:
-  - 🚀 **FULL THROTTLE** — Flat out on the straights
-  - ⬆️ **ACCELERATING** — Getting back on the power
-  - 🛑 **BRAKING** — Heavy braking zones
-  - ➡️ **COASTING** — Trail braking or lift-off
-  - 🔄 **CORNER** — Mid-corner
-  - ⬆️/⬇️ **GEAR UP/DOWN** — Gear change notifications
-  - 🟢 **DRS ACTIVE** — When DRS is deployed
-- **Corner Approach Info** — When approaching a corner:
-  - Corner name/number (e.g., "Turn 1", "Turn 4")
-  - Corner type: HAIRPIN, SWEEPER, 90 DEGREE, KINK
-  - Speed class: HIGH SPEED, MEDIUM SPEED, LOW SPEED
-  - Direction: LEFT ⟲ or RIGHT ⟳ with angle
-  - Phase: APPROACH → ENTRY → APEX → EXIT
-  - Speed targets: Entry/Apex/Exit speeds
-- **Input visualization** — Throttle/brake bars updating live
-- **Playback controls**:
-  - `Space` — Play/Pause
-  - `R` — Reset to start
-  - `←/→` — Step frame by frame
-  - `+/-` — Speed up/slow down (0.25x to 4x)
-  - GUI buttons for Play, Pause, Reset
-  - Speed slider for precise control
-
-### 🆕 Ghost Car Comparison
-Compare two drivers' fastest laps head-to-head with our new ghost comparison feature:
-
-#### Track Analysis
-- **Color-coded track sections** showing who is faster where:
-  - Each driver's team color highlights sections where they are faster
-  - Example: Verstappen vs Norris = 🔵 Blue sections (Red Bull) vs 🟠 Orange sections (McLaren)
-  - Gray sections indicate equal pace
-
-#### Comparison Summary Plot
-Static analysis view with four panels:
-- **Track Advantage Map** — Track layout colored by who's faster in each section
-- **Speed Comparison** — Overlaid speed traces with shaded advantage areas
-- **Gap/Delta Chart** — Running time delta over the lap showing where time is gained/lost
-- **Mini-Sector Breakdown** — Bar chart of time deltas for each track segment
-
-#### Animated Ghost Replay
-Watch both cars race through the lap together:
-- **Two F1 car icons** — Each in their team color racing simultaneously
-- **Live gap display** — Real-time delta timer showing current gap
-- **Gap visualization bar** — Visual indicator of who's ahead and by how much
-- **Speed comparison** — Side-by-side speed readouts with delta
-- **Sector-by-sector timing** — Mini-sector times updating as cars progress
-- **Driver labels** — Color-coded labels above each car
-- **Trails** — Different colored trails behind each car
-- **Same controls as single-car replay**:
-  - `Space` — Play/Pause
-  - `R` — Reset
-  - `←/→` — Step through
-  - `+/-` — Adjust speed
-
-#### How to Use
-1. Select a session (Qualifying recommended for best comparison)
-2. Choose any driver from the list
-3. Select "👻 Ghost Car Comparison (2 Drivers)" from the visualization menu
-4. Pick your two drivers to compare
-5. Choose to view the static summary, animated replay, or both!
-
-## 🔧 Configuration
-
-### Adjusting Zone Detection
-In `data_loader.py`, you can tune the zone detection thresholds:
-
-```python
-zones = analyze_driving_zones(
-    telemetry,
-    brake_threshold=10.0,        # Brake % to count as braking
-    throttle_full_threshold=95.0, # Throttle % for full throttle
-    throttle_partial_threshold=50.0,  # Below this = coasting
-    min_zone_points=5            # Minimum points for a zone
-)
-```
-
-### Visualization Colors
-Edit `COLORS` dict in `track_visualizer.py`:
-
-```python
-COLORS = {
-    'braking': '#FF4444',        # Red
-    'acceleration': '#44FF44',   # Green
-    'full_throttle': '#4488FF',  # Blue
-    'coasting': '#FFAA00',       # Orange
-    'corner_marker': '#FF00FF',  # Magenta
-    ...
-}
-```
-
-## 📚 How It Works
+## � How It Works
 
 1. **Data Fetching**: Uses [FastF1](https://github.com/theOehrly/Fast-F1) library to download official F1 telemetry
 2. **Zone Detection**: Analyzes throttle, brake, and speed data to identify driving zones
 3. **Corner Detection**: Finds local speed minima to identify corners and their characteristics
-4. **Visualization**: Renders track using X/Y position data, overlaying color-coded zones
+4. **Visualization**: Renders track using X/Y position data with animated car icons
 
 ## 🙏 Credits & References
 
@@ -245,7 +158,6 @@ Contributions welcome! Ideas for improvement:
 - [ ] DRS zones visualization
 - [ ] Sector time breakdown
 - [ ] Export to video/animation
-- [ ] Integration with sim racing apps
 - [ ] Web interface (Streamlit/Dash)
 
 ## 📄 License
@@ -255,6 +167,6 @@ MIT License — feel free to use, modify, and share!
 ---
 
 <p align="center">
-  <b>Happy racing! 🏁</b><br>
-  <i>Remember: Smooth is fast, fast is smooth.</i>
+  <b>Happy nerding! 🏁</b><br>
+  <i>Data is the new downforce.</i>
 </p>

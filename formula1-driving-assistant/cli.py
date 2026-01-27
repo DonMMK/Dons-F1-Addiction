@@ -1,12 +1,12 @@
 """
-Formula 1 Driving Assistant - CLI Interface Module
+Formula 1 Nerd Heaven - CLI Interface Module
 
 Interactive command-line interface using rich and questionary for:
+- Mode selection (Lap Replay / Ghost Comparison)
 - Season selection
 - Track/Event selection
 - Session type selection
 - Driver selection
-- Visualization options
 """
 
 import sys
@@ -38,12 +38,7 @@ from data_loader import (
     get_track_conditions,
     get_enhanced_corners,
 )
-from track_visualizer import (
-    create_track_plot,
-    create_telemetry_dashboard,
-    show_plot,
-    save_plot,
-)
+from track_visualizer import show_plot
 from lap_replay import run_lap_replay
 from ghost_comparison import (
     run_ghost_comparison,
@@ -72,12 +67,35 @@ custom_style = Style(
 def display_banner():
     """Display the application banner."""
     banner = """
-    ╔═══════════════════════════════════════════════════════════╗
-    ║        🏎️  F1 DRIVING ASSISTANT  🏁                        ║
-    ║     Learn the racing line from the fastest drivers        ║
-    ╚═══════════════════════════════════════════════════════════╝
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║           🏎️  FORMULA NERD HEAVEN  🏁                          ║
+    ║      Dive deep into F1 telemetry like a true data addict      ║
+    ╚═══════════════════════════════════════════════════════════════╝
     """
     console.print(Panel(banner, style="cyan", box=box.DOUBLE))
+
+
+def select_mode() -> Optional[str]:
+    """Prompt user to select the analysis mode first."""
+    choices = [
+        "🎬 Animated Lap Replay - Watch a driver's fastest lap unfold",
+        "👻 Ghost Car Comparison - Compare two drivers head-to-head",
+        "Exit",
+    ]
+
+    answer = questionary.select(
+        "What would you like to do?", choices=choices, style=custom_style
+    ).ask()
+
+    if answer == "Exit" or answer is None:
+        return None
+
+    if "Animated Lap Replay" in answer:
+        return "replay"
+    elif "Ghost Car Comparison" in answer:
+        return "ghost"
+
+    return None
 
 
 def select_season() -> Optional[int]:
@@ -85,13 +103,13 @@ def select_season() -> Optional[int]:
     seasons = get_available_seasons()
 
     choices = [str(year) for year in reversed(seasons)]
-    choices.append("Exit")
+    choices.append("← Back to mode selection")
 
     answer = questionary.select(
         "Select a season:", choices=choices, style=custom_style
     ).ask()
 
-    if answer == "Exit" or answer is None:
+    if answer is None or "Back" in answer:
         return None
 
     return int(answer)
@@ -274,41 +292,6 @@ def select_driver(session, event_name: str) -> Optional[str]:
     return answer.split(" - ")[0]
 
 
-def select_visualization_mode() -> str:
-    """Prompt user to select visualization type."""
-    choices = [
-        "🏁 Track Map with Driving Zones",
-        "📊 Full Telemetry Dashboard",
-        "🌈 Speed Gradient Map",
-        "🎬 Animated Lap Replay",
-        "👻 Ghost Car Comparison (2 Drivers)",
-        "💾 Save All Visualizations",
-        "← Back to driver selection",
-    ]
-
-    answer = questionary.select(
-        "Select visualization mode:", choices=choices, style=custom_style
-    ).ask()
-
-    if answer is None or "Back" in answer:
-        return "BACK"
-
-    if "Track Map" in answer:
-        return "zones"
-    elif "Dashboard" in answer:
-        return "dashboard"
-    elif "Speed Gradient" in answer:
-        return "speed"
-    elif "Animated Lap Replay" in answer:
-        return "replay"
-    elif "Ghost Car Comparison" in answer:
-        return "ghost"
-    elif "Save All" in answer:
-        return "save_all"
-
-    return "zones"
-
-
 def select_two_drivers(session, event_name: str) -> Optional[tuple]:
     """Prompt user to select two drivers for ghost comparison."""
     drivers = get_all_drivers_fastest_laps(session)
@@ -404,7 +387,7 @@ def run_analysis(
             progress.add_task("loading", total=None)
             session = load_session(year, round_number, session_type)
 
-    # Handle ghost comparison mode separately
+    # Handle ghost comparison mode
     if viz_mode == "ghost" and ghost_drivers:
         driver1, driver2, team1, team2 = ghost_drivers
 
@@ -542,93 +525,76 @@ def run_analysis(
 
         return
 
-    # Normal single-driver analysis
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[cyan]Loading telemetry data...[/cyan]"),
-        console=console,
-    ) as progress:
-        progress.add_task("loading", total=None)
-        telemetry = get_lap_telemetry(session, driver)
-        lap_info = get_fastest_lap_info(session) if not driver else None
-        circuit_info = get_circuit_info(session)
+    # Single-driver lap replay analysis
+    if viz_mode == "replay":
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[cyan]Loading telemetry data...[/cyan]"),
+            console=console,
+        ) as progress:
+            progress.add_task("loading", total=None)
+            telemetry = get_lap_telemetry(session, driver)
+            lap_info = get_fastest_lap_info(session) if not driver else None
+            circuit_info = get_circuit_info(session)
 
-    if telemetry is None:
-        console.print("[red]Failed to load telemetry data.[/red]")
-        return
+        if telemetry is None:
+            console.print("[red]Failed to load telemetry data.[/red]")
+            return
 
-    # Analyze driving zones
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[cyan]Analyzing driving zones...[/cyan]"),
-        console=console,
-    ) as progress:
-        progress.add_task("analyzing", total=None)
-        zones = analyze_driving_zones(telemetry)
+        # Analyze driving zones
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[cyan]Analyzing driving zones...[/cyan]"),
+            console=console,
+        ) as progress:
+            progress.add_task("analyzing", total=None)
+            zones = analyze_driving_zones(telemetry)
 
-    # Build title
-    driver_name = driver if driver else (lap_info.driver if lap_info else "Unknown")
-    title = f"{event_name} {year} - {driver_name} ({session_type})"
+        # Build title
+        driver_name = driver if driver else (lap_info.driver if lap_info else "Unknown")
+        title = f"{event_name} {year} - {driver_name} ({session_type})"
 
-    # Display analysis summary
-    summary_table = Table(title="📈 Analysis Summary", box=box.ROUNDED, style="green")
-    summary_table.add_column("Metric", style="cyan")
-    summary_table.add_column("Value", style="white")
+        # Display analysis summary
+        summary_table = Table(title="📈 Analysis Summary", box=box.ROUNDED, style="green")
+        summary_table.add_column("Metric", style="cyan")
+        summary_table.add_column("Value", style="white")
 
-    summary_table.add_row("Driver", driver_name)
-    summary_table.add_row("Lap Time", lap_info.lap_time if lap_info else "N/A")
-    summary_table.add_row("Telemetry Points", f"{len(telemetry.speed):,}")
-    summary_table.add_row("Corners Detected", str(len(zones.corner_zones)))
-    summary_table.add_row("Braking Zones", str(len(zones.braking_zones)))
-    summary_table.add_row("Full Throttle Zones", str(len(zones.full_throttle_zones)))
-    summary_table.add_row("Max Speed", f"{telemetry.speed.max():.1f} km/h")
-    summary_table.add_row("Min Speed", f"{telemetry.speed.min():.1f} km/h")
+        summary_table.add_row("Driver", driver_name)
+        summary_table.add_row("Lap Time", lap_info.lap_time if lap_info else "N/A")
+        summary_table.add_row("Telemetry Points", f"{len(telemetry.speed):,}")
+        summary_table.add_row("Corners Detected", str(len(zones.corner_zones)))
+        summary_table.add_row("Braking Zones", str(len(zones.braking_zones)))
+        summary_table.add_row("Full Throttle Zones", str(len(zones.full_throttle_zones)))
+        summary_table.add_row("Max Speed", f"{telemetry.speed.max():.1f} km/h")
+        summary_table.add_row("Min Speed", f"{telemetry.speed.min():.1f} km/h")
 
-    console.print(summary_table)
-    console.print()
-
-    # Corner details
-    if zones.corner_zones:
-        corner_table = Table(title="🔄 Corner Analysis", box=box.SIMPLE, style="yellow")
-        corner_table.add_column("Turn", style="cyan", width=6)
-        corner_table.add_column("Entry", style="white")
-        corner_table.add_column("Apex", style="green")
-        corner_table.add_column("Exit", style="white")
-        corner_table.add_column("Gear", style="yellow")
-
-        for corner in zones.corner_zones[:15]:  # Show first 15 corners
-            corner_table.add_row(
-                f"T{corner['number']}",
-                f"{corner['entry_speed']:.0f}",
-                f"{corner['apex_speed']:.0f}",
-                f"{corner['exit_speed']:.0f}",
-                str(corner["apex_gear"]),
-            )
-
-        console.print(corner_table)
+        console.print(summary_table)
         console.print()
 
-    # Generate and display visualizations
-    rotation = circuit_info.get("rotation", 0)
+        # Corner details
+        if zones.corner_zones:
+            corner_table = Table(title="🔄 Corner Analysis", box=box.SIMPLE, style="yellow")
+            corner_table.add_column("Turn", style="cyan", width=6)
+            corner_table.add_column("Entry", style="white")
+            corner_table.add_column("Apex", style="green")
+            corner_table.add_column("Exit", style="white")
+            corner_table.add_column("Gear", style="yellow")
 
-    if viz_mode == "zones":
-        console.print("[cyan]Generating track visualization...[/cyan]")
-        fig = create_track_plot(telemetry, zones, title=title, rotation=rotation)
-        show_plot(fig)
+            for corner in zones.corner_zones[:15]:  # Show first 15 corners
+                corner_table.add_row(
+                    f"T{corner['number']}",
+                    f"{corner['entry_speed']:.0f}",
+                    f"{corner['apex_speed']:.0f}",
+                    f"{corner['exit_speed']:.0f}",
+                    str(corner["apex_gear"]),
+                )
 
-    elif viz_mode == "dashboard":
-        console.print("[cyan]Generating telemetry dashboard...[/cyan]")
-        fig = create_telemetry_dashboard(telemetry, zones, title=title)
-        show_plot(fig)
+            console.print(corner_table)
+            console.print()
 
-    elif viz_mode == "speed":
-        console.print("[cyan]Generating speed gradient map...[/cyan]")
-        fig = create_track_plot(
-            telemetry, zones, title=title, show_speed_gradient=True, rotation=rotation
-        )
-        show_plot(fig)
+        # Generate and display replay
+        rotation = circuit_info.get("rotation", 0)
 
-    elif viz_mode == "replay":
         console.print("[cyan]Starting animated lap replay...[/cyan]")
         console.print(
             "[dim]Controls: Space=Play/Pause | R=Reset | ←→=Step | +/-=Speed[/dim]"
@@ -654,120 +620,113 @@ def run_analysis(
             rotation=rotation,
         )
 
-    elif viz_mode == "save_all":
-        console.print("[cyan]Generating and saving all visualizations...[/cyan]")
-
-        # Create safe filename
-        safe_name = (
-            f"{year}_{event_name.replace(' ', '_')}_{session_type}_{driver_name}"
-        )
-
-        fig1 = create_track_plot(telemetry, zones, title=title, rotation=rotation)
-        save_plot(fig1, f"{safe_name}_zones.png")
-
-        fig2 = create_telemetry_dashboard(telemetry, zones, title=title)
-        save_plot(fig2, f"{safe_name}_dashboard.png")
-
-        fig3 = create_track_plot(
-            telemetry, zones, title=title, show_speed_gradient=True, rotation=rotation
-        )
-        save_plot(fig3, f"{safe_name}_speed.png")
-
-        console.print(
-            f"[green]✓ Saved 3 visualizations with prefix: {safe_name}[/green]"
-        )
-
 
 def main():
-    """Main application loop."""
+    """Main application loop with mode-first flow."""
     display_banner()
 
     console.print("[dim]Tip: Use arrow keys to navigate, Enter to select[/dim]\n")
 
     while True:
-        # Season selection
-        year = select_season()
-        if year is None:
-            console.print("\n[cyan]Thanks for using F1 Driving Assistant! 👋[/cyan]")
+        # Mode selection FIRST
+        viz_mode = select_mode()
+        if viz_mode is None:
+            console.print("\n[cyan]Thanks for nerding out with us! 🏎️👋[/cyan]")
             sys.exit(0)
 
         while True:
-            # Event selection
-            event = select_event(year)
-            if event is None:
-                break  # Back to season selection
-
-            # Check if this is a testing event
-            is_testing = event.get("is_testing", False)
-            test_number = event.get("test_number") if is_testing else None
-            # Ensure test_number is None for non-testing, not 0
-            if test_number == 0:
-                test_number = None
+            # Season selection
+            year = select_season()
+            if year is None:
+                break  # Back to mode selection
 
             while True:
-                # Session selection
-                session_type = select_session(
-                    year,
-                    event["round_number"],
-                    event["event_name"],
-                    test_number=test_number,
-                )
-                if session_type is None:
-                    break  # Back to event selection
+                # Event selection
+                event = select_event(year)
+                if event is None:
+                    break  # Back to season selection
 
-                # Load session for driver selection
-                console.print()
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[cyan]Loading session...[/cyan]"),
-                    console=console,
-                ) as progress:
-                    progress.add_task("loading", total=None)
-                    session = load_session(
-                        year,
-                        event["round_number"],
-                        session_type,
-                        test_number=test_number,
-                    )
+                # Check if this is a testing event
+                is_testing = event.get("is_testing", False)
+                test_number = event.get("test_number") if is_testing else None
+                # Ensure test_number is None for non-testing, not 0
+                if test_number == 0:
+                    test_number = None
 
                 while True:
-                    # Driver selection
-                    driver = select_driver(session, event["event_name"])
-                    if driver == "BACK":
-                        break  # Back to session selection
+                    # Session selection
+                    session_type = select_session(
+                        year,
+                        event["round_number"],
+                        event["event_name"],
+                        test_number=test_number,
+                    )
+                    if session_type is None:
+                        break  # Back to event selection
 
-                    while True:
-                        # Visualization selection
-                        viz_mode = select_visualization_mode()
-                        if viz_mode == "BACK":
-                            break  # Back to driver selection
+                    # Load session for driver selection
+                    console.print()
+                    with Progress(
+                        SpinnerColumn(),
+                        TextColumn("[cyan]Loading session...[/cyan]"),
+                        console=console,
+                    ) as progress:
+                        progress.add_task("loading", total=None)
+                        session = load_session(
+                            year,
+                            event["round_number"],
+                            session_type,
+                            test_number=test_number,
+                        )
 
-                        # Handle ghost comparison mode - need to select second driver
-                        ghost_drivers = None
-                        if viz_mode == "ghost":
-                            ghost_drivers = select_two_drivers(
-                                session, event["event_name"]
-                            )
-                            if ghost_drivers is None:
-                                continue  # Back to visualization selection
+                    # Different flow based on mode
+                    if viz_mode == "ghost":
+                        # Ghost comparison - select two drivers directly
+                        ghost_drivers = select_two_drivers(session, event["event_name"])
+                        if ghost_drivers is None:
+                            continue  # Back to session selection
 
-                        # Run analysis
+                        # Run ghost comparison analysis
                         run_analysis(
                             year=year,
                             round_number=event["round_number"],
                             session_type=session_type,
-                            driver=driver,
+                            driver=None,
                             viz_mode=viz_mode,
                             event_name=event["event_name"],
                             session=session,
                             ghost_drivers=ghost_drivers,
                         )
 
-                        # Ask if user wants another visualization
+                        # Ask if user wants another comparison
                         if not questionary.confirm(
-                            "Generate another visualization?", style=custom_style
+                            "Compare another pair of drivers?", style=custom_style
                         ).ask():
                             break
+
+                    else:
+                        # Single driver lap replay
+                        while True:
+                            driver = select_driver(session, event["event_name"])
+                            if driver == "BACK":
+                                break  # Back to session selection
+
+                            # Run lap replay analysis
+                            run_analysis(
+                                year=year,
+                                round_number=event["round_number"],
+                                session_type=session_type,
+                                driver=driver,
+                                viz_mode=viz_mode,
+                                event_name=event["event_name"],
+                                session=session,
+                            )
+
+                            # Ask if user wants another replay
+                            if not questionary.confirm(
+                                "Replay another driver's lap?", style=custom_style
+                            ).ask():
+                                break
 
 
 if __name__ == "__main__":

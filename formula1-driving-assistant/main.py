@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Formula 1 Driving Assistant - Main Entry Point
+Formula Nerd Heaven - Main Entry Point
 
-A sim racing training tool that visualizes real F1 telemetry data
-to help drivers learn braking zones, racing lines, and optimal inputs.
+A telemetry analysis tool that visualizes real F1 data
+to help racing enthusiasts dive deep into driver performance.
 
 Usage:
     python main.py           # Interactive CLI mode
@@ -35,14 +35,12 @@ console = Console()
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="F1 Driving Assistant - Learn the racing line from the fastest drivers",
+        description="Formula Nerd Heaven - Dive deep into F1 telemetry",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
     python main.py                    Interactive mode (recommended)
     python main.py --test             Test with sample data
-    python main.py --year 2024 --round 1 --session Q
-                                      Direct analysis mode
     python main.py --ghost --year 2024 --round 1 --driver1 VER --driver2 NOR
                                       Ghost car comparison
         """,
@@ -63,12 +61,6 @@ Examples:
         help="Session type: FP1, FP2, FP3, Q, R, S, SQ",
     )
     parser.add_argument(
-        "--driver",
-        type=str,
-        default=None,
-        help="Driver code (e.g., VER, HAM). Omit for fastest.",
-    )
-    parser.add_argument(
         "--driver1",
         type=str,
         default=None,
@@ -80,9 +72,6 @@ Examples:
         default=None,
         help="Second driver for ghost comparison (e.g., NOR)",
     )
-    parser.add_argument(
-        "--save", type=str, default=None, help="Save visualization to file"
-    )
 
     args = parser.parse_args()
 
@@ -90,8 +79,6 @@ Examples:
         run_test()
     elif args.ghost and args.year and args.round and args.driver1 and args.driver2:
         run_ghost_comparison_direct(args)
-    elif args.year and args.round:
-        run_direct(args)
     else:
         # Run interactive CLI
         from cli import main as cli_main
@@ -137,10 +124,25 @@ def run_test():
                 f"[green]✓ Found {len(zones.corner_zones)} corners, {len(zones.braking_zones)} braking zones[/green]"
             )
 
-            console.print("\n[cyan]Generating track visualization...[/cyan]")
+            console.print("\n[cyan]Starting lap replay animation...[/cyan]")
             title = f"Bahrain GP 2024 - {lap_info.driver if lap_info else 'Fastest'}"
-            fig = create_track_plot(telemetry, zones, title=title)
-            show_plot(fig)
+
+            from track_visualizer import show_plot
+            from lap_replay import run_lap_replay
+            from data_loader import get_track_conditions, get_enhanced_corners, get_circuit_info
+
+            circuit_info = get_circuit_info(session)
+            track_conditions = get_track_conditions(session)
+            enhanced_corners = get_enhanced_corners(session, telemetry, zones.corner_zones)
+
+            run_lap_replay(
+                telemetry=telemetry,
+                zones=zones,
+                track_conditions=track_conditions,
+                enhanced_corners=enhanced_corners,
+                title=title,
+                rotation=circuit_info.get("rotation", 0),
+            )
         else:
             console.print("[red]✗ Failed to load telemetry[/red]")
 
@@ -149,74 +151,6 @@ def run_test():
         console.print(
             "[yellow]Make sure you have an internet connection for first-time data download.[/yellow]"
         )
-        sys.exit(1)
-
-
-def run_direct(args):
-    """Run direct analysis from command line arguments."""
-    from data_loader import (
-        load_session,
-        get_fastest_lap_info,
-        get_lap_telemetry,
-        analyze_driving_zones,
-        get_circuit_info,
-        get_season_schedule,
-    )
-    from track_visualizer import (
-        create_track_plot,
-        create_telemetry_dashboard,
-        show_plot,
-        save_plot,
-    )
-
-    console.print(
-        f"[cyan]Loading {args.year} Round {args.round} {args.session}...[/cyan]"
-    )
-
-    try:
-        # Get event name
-        events = get_season_schedule(args.year)
-        event = next((e for e in events if e["round_number"] == args.round), None)
-        event_name = event["event_name"] if event else f"Round {args.round}"
-
-        session = load_session(args.year, args.round, args.session)
-
-        lap_info = get_fastest_lap_info(session)
-        driver_name = (
-            args.driver if args.driver else (lap_info.driver if lap_info else "Unknown")
-        )
-
-        console.print(
-            f"[dim]Fastest lap: {lap_info.driver} - {lap_info.lap_time}[/dim]"
-            if lap_info
-            else ""
-        )
-
-        telemetry = get_lap_telemetry(session, args.driver)
-        if not telemetry:
-            console.print("[red]Failed to load telemetry[/red]")
-            sys.exit(1)
-
-        zones = analyze_driving_zones(telemetry)
-        circuit_info = get_circuit_info(session)
-
-        console.print(
-            f"[green]✓ {len(zones.corner_zones)} corners, {len(zones.braking_zones)} braking zones[/green]"
-        )
-
-        title = f"{event_name} {args.year} - {driver_name}"
-        fig = create_track_plot(
-            telemetry, zones, title=title, rotation=circuit_info.get("rotation", 0)
-        )
-
-        if args.save:
-            save_plot(fig, args.save)
-            console.print(f"[green]Saved to {args.save}[/green]")
-        else:
-            show_plot(fig)
-
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
         sys.exit(1)
 
 

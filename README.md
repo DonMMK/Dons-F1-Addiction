@@ -4,14 +4,12 @@ A collection of Formula 1 data analysis tools built with Python and the FastF1 l
 
 ## 📦 Features
 
-### 1. F1 Driving Assistant
-An interactive CLI tool for analyzing driver telemetry and learning racing lines from the fastest drivers.
+### 1. Formula Nerd Heaven (formerly F1 Driving Assistant)
+An interactive CLI tool for visualizing F1 telemetry with animated lap replays and driver comparisons.
 
 **Features:**
 - 🗓️ Browse F1 calendars from 2018 onwards (including pre-season testing)
-- 📊 Full telemetry dashboards (speed, throttle, brake, gear, DRS)
-- 🌈 Speed gradient track maps
-- 🎬 Animated lap replays
+- 🎬 Animated lap replays with live telemetry display
 - 👻 Ghost car comparisons between two drivers
 - 🏁 Driving zone analysis (braking points, acceleration zones, corners)
 
@@ -71,7 +69,7 @@ Statistical analysis to determine which car has the performance advantage across
 
 ## 🎮 Usage
 
-### F1 Driving Assistant
+### Formula Nerd Heaven
 
 ```bash
 cd formula1-driving-assistant
@@ -79,11 +77,11 @@ python main.py
 ```
 
 Use the interactive CLI to:
-1. Select a season (2018-2026)
-2. Choose a race or pre-season testing event
-3. Pick a session (Practice, Qualifying, Sprint, Race, or Testing)
-4. Select a driver to analyze
-5. Choose your visualization type
+1. **Choose your mode first**: 🎬 Lap Replay or 👻 Ghost Comparison
+2. Select a season (2018-2026)
+3. Choose a race or pre-season testing event
+4. Pick a session (Practice, Qualifying, Sprint, Race, or Testing)
+5. Select driver(s) based on your chosen mode
 
 ### F1 Prediction
 
@@ -105,7 +103,7 @@ python main.py
 
 ```
 Dons-F1-Addiction/
-├── formula1-driving-assistant/   # Telemetry analysis & visualization
+├── formula1-driving-assistant/   # Telemetry visualization (Formula Nerd Heaven)
 │   ├── main.py                   # Entry point
 │   ├── cli.py                    # Interactive command-line interface
 │   ├── data_loader.py            # FastF1 data loading utilities
@@ -114,7 +112,7 @@ Dons-F1-Addiction/
 │   └── ghost_comparison.py       # Driver comparison animations
 │
 ├── formula1-prediction/          # Race outcome predictions
-│   ├── f1_predictor.py           # Main prediction model
+│   ├── f1_predictor_v*.py        # Main prediction model
 │   └── benchmark_*.py            # Historical accuracy tests
 │
 ├── formula1-best-car/            # Car performance analysis
