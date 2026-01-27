@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Formula Nerd Heaven - Main Entry Point
+Formula 1 Ghost Car - Main Entry Point
 
 A telemetry analysis tool that visualizes real F1 data
 to help racing enthusiasts dive deep into driver performance.
@@ -35,7 +35,7 @@ console = Console()
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Formula Nerd Heaven - Dive deep into F1 telemetry",
+        description="Formula 1 Ghost Car - Dive deep into F1 telemetry",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

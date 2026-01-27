@@ -850,6 +850,204 @@ def get_all_drivers_fastest_laps(session) -> List[Dict[str, Any]]:
         return []
 
 
+@dataclass
+class RaceLapData:
+    """Container for a single race lap's data"""
+    lap_number: int
+    lap_time_seconds: float
+    cumulative_time: float
+    compound: str
+    is_pit_lap: bool
+    position: int
+    telemetry: Optional[TelemetryData] = None
+
+
+@dataclass
+class RaceData:
+    """Container for a driver's full race data"""
+    driver: str
+    team: str
+    laps: List[RaceLapData]
+    total_laps: int
+    finished: bool
+    final_position: int
+
+
+def get_driver_race_laps(session, driver: str, load_telemetry: bool = True) -> Optional[RaceData]:
+    """
+    Get all race laps for a specific driver.
+    
+    Args:
+        session: FastF1 session object (must be a Race session)
+        driver: Driver code (e.g., 'VER', 'HAM')
+        load_telemetry: Whether to load telemetry for each lap (slower but needed for replay)
+    
+    Returns:
+        RaceData object with all laps, or None if error
+    """
+    try:
+        driver_laps = session.laps.pick_drivers(driver)
+        if driver_laps.empty:
+            return None
+        
+        # Get driver info from first lap
+        first_lap = driver_laps.iloc[0]
+        team = str(first_lap.get("Team", "Unknown"))
+        
+        laps_data = []
+        cumulative_time = 0.0
+        
+        for idx, lap in driver_laps.iterrows():
+            lap_time = lap.get("LapTime")
+            if pd.isna(lap_time):
+                continue
+            
+            lap_time_seconds = lap_time.total_seconds()
+            cumulative_time += lap_time_seconds
+            
+            # Detect pit stop
+            pit_in = lap.get("PitInTime")
+            pit_out = lap.get("PitOutTime")
+            is_pit_lap = not (pd.isna(pit_in) and pd.isna(pit_out))
+            
+            # Get position
+            position = int(lap.get("Position", 0)) if not pd.isna(lap.get("Position")) else 0
+            
+            # Load telemetry if requested
+            telemetry = None
+            if load_telemetry:
+                try:
+                    tel_data = lap.get_telemetry()
+                    if tel_data is not None and not tel_data.empty:
+                        telemetry = TelemetryData(
+                            x=tel_data["X"].to_numpy(),
+                            y=tel_data["Y"].to_numpy(),
+                            speed=tel_data["Speed"].to_numpy(),
+                            throttle=tel_data["Throttle"].to_numpy(),
+                            brake=tel_data["Brake"].to_numpy().astype(float),
+                            gear=tel_data["nGear"].to_numpy(),
+                            distance=tel_data["Distance"].to_numpy(),
+                            time=tel_data["Time"].dt.total_seconds().to_numpy(),
+                            drs=tel_data["DRS"].to_numpy(),
+                        )
+                except Exception:
+                    pass  # Some laps may not have telemetry
+            
+            laps_data.append(RaceLapData(
+                lap_number=int(lap.get("LapNumber", idx + 1)),
+                lap_time_seconds=lap_time_seconds,
+                cumulative_time=cumulative_time,
+                compound=str(lap.get("Compound", "Unknown")),
+                is_pit_lap=is_pit_lap,
+                position=position,
+                telemetry=telemetry,
+            ))
+        
+        if not laps_data:
+            return None
+        
+        # Determine final position
+        final_position = laps_data[-1].position if laps_data else 0
+        
+        return RaceData(
+            driver=driver,
+            team=team,
+            laps=laps_data,
+            total_laps=len(laps_data),
+            finished=len(laps_data) > 0,
+            final_position=final_position,
+        )
+        
+    except Exception as e:
+        print(f"Error getting race laps for {driver}: {e}")
+        return None
+
+
+def get_race_drivers_summary(session) -> List[Dict[str, Any]]:
+    """
+    Get summary info for all drivers in a race session.
+    
+    Returns list sorted by final position with:
+        - driver: Driver code
+        - team: Team name
+        - total_laps: Number of laps completed
+        - total_time: Total race time (seconds)
+        - final_position: Finishing position
+        - fastest_lap: Fastest lap time string
+    """
+    drivers = []
+    
+    try:
+        for driver in session.drivers:
+            driver_laps = session.laps.pick_drivers(driver)
+            if driver_laps.empty:
+                continue
+            
+            # Get basic info
+            first_lap = driver_laps.iloc[0]
+            team = str(first_lap.get("Team", "Unknown"))
+            
+            # Calculate total time
+            total_time = 0.0
+            for _, lap in driver_laps.iterrows():
+                lap_time = lap.get("LapTime")
+                if not pd.isna(lap_time):
+                    total_time += lap_time.total_seconds()
+            
+            # Get fastest lap
+            fastest = driver_laps.pick_fastest()
+            if fastest is not None and not pd.isna(fastest.get("LapTime")):
+                fl_time = fastest["LapTime"].total_seconds()
+                fl_min = int(fl_time // 60)
+                fl_sec = fl_time % 60
+                fastest_lap = f"{fl_min}:{fl_sec:06.3f}"
+            else:
+                fastest_lap = "N/A"
+            
+            # Get final position
+            last_lap = driver_laps.iloc[-1]
+            final_position = int(last_lap.get("Position", 99)) if not pd.isna(last_lap.get("Position")) else 99
+            
+            drivers.append({
+                "driver": str(first_lap["Driver"]),
+                "team": team,
+                "total_laps": len(driver_laps),
+                "total_time": total_time,
+                "final_position": final_position,
+                "fastest_lap": fastest_lap,
+            })
+        
+        # Sort by final position
+        drivers.sort(key=lambda x: x["final_position"])
+        
+        return drivers
+        
+    except Exception as e:
+        print(f"Error getting race drivers summary: {e}")
+        return []
+
+
+def get_race_comparison_data(
+    session, driver1: str, driver2: str, load_telemetry: bool = True
+) -> Tuple[Optional[RaceData], Optional[RaceData]]:
+    """
+    Get race data for two drivers for comparison.
+    
+    Args:
+        session: FastF1 Race session
+        driver1: First driver code
+        driver2: Second driver code
+        load_telemetry: Whether to load telemetry (slower but needed for replay)
+    
+    Returns:
+        Tuple of (RaceData for driver1, RaceData for driver2)
+    """
+    race1 = get_driver_race_laps(session, driver1, load_telemetry)
+    race2 = get_driver_race_laps(session, driver2, load_telemetry)
+    
+    return race1, race2
+
+
 if __name__ == "__main__":
     # Quick test
     print("Testing Data Loader...")

@@ -1,12 +1,13 @@
 """
-Formula 1 Nerd Heaven - CLI Interface Module
+Formula 1 Ghost Car - CLI Interface Module
 
 Interactive command-line interface using rich and questionary for:
-- Mode selection (Lap Replay / Ghost Comparison)
-- Season selection
-- Track/Event selection
-- Session type selection
-- Driver selection
+- Ghost Car lap comparison (fastest laps)
+- Single driver lap replay
+- Season/Track/Session/Driver selection
+
+Note: All modes analyze the FASTEST LAP from the selected session.
+For full race replay, see: https://github.com/IAmTomShaw/f1-race-replay
 """
 
 import sys
@@ -37,6 +38,7 @@ from data_loader import (
     get_circuit_info,
     get_track_conditions,
     get_enhanced_corners,
+    get_race_drivers_summary,
 )
 from track_visualizer import show_plot
 from lap_replay import run_lap_replay
@@ -45,6 +47,7 @@ from ghost_comparison import (
     analyze_lap_comparison,
     create_comparison_summary_plot,
 )
+from race_replay import run_race_replay
 
 # Initialize rich console
 console = Console()
@@ -68,8 +71,8 @@ def display_banner():
     """Display the application banner."""
     banner = """
     ╔═══════════════════════════════════════════════════════════════╗
-    ║           🏎️  FORMULA NERD HEAVEN  🏁                          ║
-    ║      Dive deep into F1 telemetry like a true data addict      ║
+    ║              🏎️  F1 GHOST CAR  👻                              ║
+    ║       Compare drivers lap-by-lap like never before            ║
     ╚═══════════════════════════════════════════════════════════════╝
     """
     console.print(Panel(banner, style="cyan", box=box.DOUBLE))
@@ -77,9 +80,13 @@ def display_banner():
 
 def select_mode() -> Optional[str]:
     """Prompt user to select the analysis mode first."""
+    console.print("[dim]Fastest lap modes analyze the best lap from the session[/dim]")
+    console.print("[dim]Race replay compares drivers across all laps of a race[/dim]\n")
+    
     choices = [
-        "🎬 Animated Lap Replay - Watch a driver's fastest lap unfold",
-        "👻 Ghost Car Comparison - Compare two drivers head-to-head",
+        "👻 Ghost Car Lap Comparison - Compare two drivers' fastest laps head-to-head",
+        "🎬 Single Driver Lap Replay - Watch one driver's fastest lap unfold",
+        "🏁 Ghost Car Race Replay - Full race comparison (all laps)",
         "Exit",
     ]
 
@@ -89,11 +96,17 @@ def select_mode() -> Optional[str]:
 
     if answer == "Exit" or answer is None:
         return None
+    
+    if answer.startswith("─"):
+        # Separator selected, go back
+        return "BACK"
 
-    if "Animated Lap Replay" in answer:
-        return "replay"
-    elif "Ghost Car Comparison" in answer:
+    if "Ghost Car Lap Comparison" in answer:
         return "ghost"
+    elif "Single Driver Lap Replay" in answer:
+        return "replay"
+    elif "Ghost Car Race Replay" in answer:
+        return "race"
 
     return None
 
@@ -212,23 +225,24 @@ def select_session(
         sessions = get_session_types(year, round_number, test_number=test_number)
 
     session_names = {
-        "FP1": "Free Practice 1",
-        "FP2": "Free Practice 2",
-        "FP3": "Free Practice 3",
-        "Q": "Qualifying",
-        "SQ": "Sprint Qualifying",
-        "SS": "Sprint Shootout",
-        "S": "Sprint Race",
-        "R": "Race",
-        "T1": "Testing Session 1",
-        "T2": "Testing Session 2",
-        "T3": "Testing Session 3",
+        "FP1": "Free Practice 1 (fastest lap)",
+        "FP2": "Free Practice 2 (fastest lap)",
+        "FP3": "Free Practice 3 (fastest lap)",
+        "Q": "Qualifying (fastest lap)",
+        "SQ": "Sprint Qualifying (fastest lap)",
+        "SS": "Sprint Shootout (fastest lap)",
+        "S": "Sprint Race (fastest lap)",
+        "R": "Race (fastest lap only)",
+        "T1": "Testing Day 1 (fastest lap)",
+        "T2": "Testing Day 2 (fastest lap)",
+        "T3": "Testing Day 3 (fastest lap)",
     }
 
     choices = [f"{s} - {session_names.get(s, s)}" for s in sessions]
     choices.append("← Back to track selection")
 
     console.print(f"\n[cyan]Sessions available for {event_name}:[/cyan]")
+    console.print("[dim]Note: All sessions show fastest lap comparison, not full session[/dim]")
 
     answer = questionary.select(
         "Select a session:", choices=choices, style=custom_style
@@ -331,6 +345,86 @@ def select_two_drivers(session, event_name: str) -> Optional[tuple]:
 
     console.print(
         "[cyan]Select the FIRST driver (their color will be shown on track sections where they're faster):[/cyan]"
+    )
+    answer1 = questionary.select(
+        "Driver 1:", choices=driver_choices, style=custom_style
+    ).ask()
+
+    if answer1 is None or "Back" in answer1:
+        return None
+
+    driver1 = answer1.split(" - ")[0]
+
+    # Create choices for second driver (exclude first driver)
+    driver_choices_2 = [c for c in driver_choices if not c.startswith(driver1)]
+
+    console.print(
+        f"\n[cyan]Select the SECOND driver to compare against {driver1}:[/cyan]"
+    )
+    answer2 = questionary.select(
+        "Driver 2:", choices=driver_choices_2, style=custom_style
+    ).ask()
+
+    if answer2 is None or "Back" in answer2:
+        return None
+
+    driver2 = answer2.split(" - ")[0]
+
+    # Get team info
+    team1 = next((d["team"] for d in drivers if d["driver"] == driver1), None)
+    team2 = next((d["team"] for d in drivers if d["driver"] == driver2), None)
+
+    return (driver1, driver2, team1, team2)
+
+
+def select_two_drivers_for_race(session, event_name: str) -> Optional[tuple]:
+    """Prompt user to select two drivers for race replay comparison."""
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[cyan]Loading race results...[/cyan]"),
+        console=console,
+    ) as progress:
+        progress.add_task("loading", total=None)
+        drivers = get_race_drivers_summary(session)
+    
+    if len(drivers) < 2:
+        console.print(
+            "[red]Need at least 2 drivers with race data for comparison.[/red]"
+        )
+        return None
+
+    # Display race results
+    table = Table(
+        title=f"🏁 Race Replay - Select 2 Drivers - {event_name}",
+        box=box.ROUNDED,
+        style="cyan",
+    )
+    table.add_column("Pos", style="yellow", width=4)
+    table.add_column("Driver", style="white")
+    table.add_column("Team", style="dim")
+    table.add_column("Laps", style="green")
+    table.add_column("Fastest Lap", style="cyan")
+
+    for driver in drivers[:20]:
+        table.add_row(
+            f"P{driver['final_position']}",
+            driver["driver"],
+            driver["team"],
+            str(driver["total_laps"]),
+            driver["fastest_lap"],
+        )
+
+    console.print(table)
+    console.print()
+
+    # Create choices for first driver
+    driver_choices = [
+        f"{d['driver']} - {d['team']} (P{d['final_position']})" for d in drivers
+    ]
+    driver_choices.append("← Back")
+
+    console.print(
+        "[cyan]Select the FIRST driver:[/cyan]"
     )
     answer1 = questionary.select(
         "Driver 1:", choices=driver_choices, style=custom_style
@@ -631,8 +725,11 @@ def main():
         # Mode selection FIRST
         viz_mode = select_mode()
         if viz_mode is None:
-            console.print("\n[cyan]Thanks for nerding out with us! 🏎️👋[/cyan]")
+            console.print("\n[cyan]Thanks for using F1 Ghost Car! 👻🏎️[/cyan]")
             sys.exit(0)
+        
+        if viz_mode == "BACK":
+            continue  # Back to mode selection
 
         while True:
             # Season selection
@@ -696,6 +793,44 @@ def main():
                             event_name=event["event_name"],
                             session=session,
                             ghost_drivers=ghost_drivers,
+                        )
+
+                        # Ask if user wants another comparison
+                        if not questionary.confirm(
+                            "Compare another pair of drivers?", style=custom_style
+                        ).ask():
+                            break
+
+                    elif viz_mode == "race":
+                        # Race replay - must be a race session
+                        if session_type not in ["R", "S"]:
+                            console.print(
+                                "[yellow]Race replay is only available for Race (R) or Sprint (S) sessions.[/yellow]"
+                            )
+                            console.print("[dim]Please select a Race or Sprint session.[/dim]\n")
+                            continue
+
+                        # Select two drivers for race comparison
+                        race_drivers = select_two_drivers_for_race(session, event["event_name"])
+                        if race_drivers is None:
+                            continue  # Back to session selection
+
+                        driver1, driver2, team1, team2 = race_drivers
+
+                        # Build title
+                        title = f"{event['event_name']} {year} - {driver1} vs {driver2} (Race)"
+
+                        # Run race replay
+                        console.print(f"\n[cyan]Starting race replay: {driver1} vs {driver2}[/cyan]")
+                        console.print("[dim]This may take a moment to load all lap data...[/dim]\n")
+
+                        run_race_replay(
+                            session=session,
+                            driver1=driver1,
+                            driver2=driver2,
+                            title=title,
+                            show_summary=True,
+                            show_replay=True,
                         )
 
                         # Ask if user wants another comparison

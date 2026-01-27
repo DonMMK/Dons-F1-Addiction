@@ -1,6 +1,6 @@
-# 🏎️ Formula Nerd Heaven
+# 🏎️👻 F1 Ghost Car
 
-> **Dive deep into F1 telemetry like a true data addict** — An interactive tool that visualizes real Formula 1 telemetry data for racing enthusiasts.
+> **Compare F1 drivers lap-by-lap like never before** — An interactive tool that visualizes real Formula 1 telemetry data for head-to-head driver comparisons.
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![FastF1](https://img.shields.io/badge/FastF1-3.3+-green.svg)
@@ -8,50 +8,20 @@
 
 ## 🎯 What Is This?
 
-Formula Nerd Heaven is an interactive tool that fetches real Formula 1 telemetry data and visualizes it in two powerful ways:
+F1 Ghost Car is a telemetry visualization tool for **comparing F1 drivers**. Compare fastest laps head-to-head, or watch full race replays showing how the gap evolved over every lap.
 
-- **🎬 Animated Lap Replay** — Watch a driver's fastest lap unfold in real-time with live telemetry
-- **👻 Ghost Car Comparison** — Compare two drivers' laps head-to-head with animated racing
+### Main Features:
+- **👻 Ghost Car Lap Comparison** — Compare two drivers' fastest laps with animated racing replay
+- **🎬 Single Driver Lap Replay** — Watch one driver's fastest lap unfold with live telemetry
+- **🏁 Ghost Car Race Replay** — Full race comparison across all laps with gap evolution
 
-Perfect for F1 fans who want to understand what separates the fastest drivers!
+### Session Types:
+- **Fastest Lap Modes** (Ghost Lap Comparison, Single Replay): Uses the best lap from any session
+- **Race Replay Mode**: Uses all laps from Race (R) or Sprint (S) sessions
 
 ## ✨ Features
 
-### 📊 Interactive Analysis
-- Select any F1 track from 2018 onwards
-- Choose from Qualifying, Race, Sprint, or Practice sessions
-- Compare different drivers' laps
-
-### 🎬 Animated Lap Replay
-Watch the lap unfold in real-time with our enhanced replay system:
-- **F1 Car Icon** — Realistic car shape rotating with the racing line
-- **Live telemetry** — Speed, Gear, Throttle %, Brake %
-- **Track Conditions Panel** — Weather, tire compound with color-coded indicator, tire age
-- **Driver Status Info Box** — Real-time updates showing:
-  - 🚀 **FULL THROTTLE** — Flat out on the straights
-  - ⬆️ **ACCELERATING** — Getting back on the power
-  - 🛑 **BRAKING** — Heavy braking zones
-  - ➡️ **COASTING** — Trail braking or lift-off
-  - 🔄 **CORNER** — Mid-corner
-  - ⬆️/⬇️ **GEAR UP/DOWN** — Gear change notifications
-  - 🟢 **DRS ACTIVE** — When DRS is deployed
-- **Corner Approach Info** — When approaching a corner:
-  - Corner name/number (e.g., "Turn 1", "Turn 4")
-  - Corner type: HAIRPIN, SWEEPER, 90 DEGREE, KINK
-  - Speed class: HIGH SPEED, MEDIUM SPEED, LOW SPEED
-  - Direction: LEFT ⟲ or RIGHT ⟳ with angle
-  - Phase: APPROACH → ENTRY → APEX → EXIT
-  - Speed targets: Entry/Apex/Exit speeds
-- **Input visualization** — Throttle/brake bars updating live
-- **Playback controls**:
-  - `Space` — Play/Pause
-  - `R` — Reset to start
-  - `←/→` — Step frame by frame
-  - `+/-` — Speed up/slow down (0.25x to 4x)
-  - GUI buttons for Play, Pause, Reset
-  - Speed slider for precise control
-
-### 👻 Ghost Car Comparison
+### � Ghost Car Lap Comparison (Primary Feature)
 Compare two drivers' fastest laps head-to-head:
 
 #### Track Analysis
@@ -76,7 +46,55 @@ Watch both cars race through the lap together:
 - **Sector-by-sector timing** — Mini-sector times updating as cars progress
 - **Driver labels** — Color-coded labels above each car
 - **Trails** — Different colored trails behind each car
-- **Same controls as single-car replay**
+
+### 🎬 Single Driver Lap Replay
+Watch one driver's fastest lap unfold in real-time:
+- **F1 Car Icon** — Realistic car shape rotating with the racing line
+- **Live telemetry** — Speed, Gear, Throttle %, Brake %
+- **Track Conditions Panel** — Weather, tire compound with color-coded indicator, tire age
+- **Driver Status Info Box** — Real-time updates showing:
+  - 🚀 **FULL THROTTLE** — Flat out on the straights
+  - ⬆️ **ACCELERATING** — Getting back on the power
+  - 🛑 **BRAKING** — Heavy braking zones
+  - ➡️ **COASTING** — Trail braking or lift-off
+  - 🔄 **CORNER** — Mid-corner
+  - ⬆️/⬇️ **GEAR UP/DOWN** — Gear change notifications
+  - 🟢 **DRS ACTIVE** — When DRS is deployed
+- **Corner Approach Info** — Corner type, speed class, direction, phase, speed targets
+
+### 🏁 Ghost Car Race Replay
+Compare two drivers across an entire race - see how the gap evolved lap by lap:
+
+#### Race Summary Plot
+Static analysis view showing:
+- **Gap Evolution Chart** — Line graph showing the gap between drivers over all laps
+- **Position Chart** — Track position changes throughout the race
+- **Lap Times Comparison** — Side-by-side lap time traces
+- **Race Summary** — Final result, pit stops, laps completed
+
+#### Animated Race Replay
+Watch both drivers race through every lap:
+- **Two F1 car icons** — Racing through each lap in sequence
+- **Lap counter** — Current lap / Total laps
+- **Running gap display** — Real-time gap showing who leads
+- **Pit stop indicators** — Visual markers when drivers pit
+- **Gap evolution chart** — Progress marker showing current position in race
+- **Driver info panels** — Position, lap time, team colors
+
+#### Race Replay Controls
+- `Space` — Play/Pause
+- `R` — Reset to lap 1
+- `←/→` — Previous/Next lap
+- `+/-` — Adjust playback speed
+- GUI buttons and speed slider
+
+### Playback Controls (All Modes)
+- `Space` — Play/Pause
+- `R` — Reset to start
+- `←/→` — Step frame by frame
+- `+/-` — Speed up/slow down (0.25x to 4x)
+- GUI buttons for Play, Pause, Reset
+- Speed slider for precise control
 
 ## 🚀 Quick Start
 
@@ -87,8 +105,8 @@ Watch both cars race through the lap together:
 ### Installation
 
 ```bash
-# Clone the repository
-cd formula1-driving-assistant
+# Navigate to the project
+cd formula1-ghost-car
 
 # Create virtual environment (recommended)
 python -m venv venv
@@ -106,10 +124,12 @@ python main.py
 ```
 
 This launches an interactive menu where you:
-1. **Choose your mode first**: Lap Replay or Ghost Comparison
+1. **Choose your mode**: Ghost Car Comparison, Single Lap Replay, or Race Replay
 2. Select a season (2018-2026)
 3. Choose a track
-4. Pick a session (Qualifying, Race, etc.)
+4. Pick a session:
+   - For Race Replay: Must select Race (R) or Sprint (S)
+   - For other modes: Any session works (fastest lap is extracted)
 5. Select driver(s) based on your chosen mode
 
 #### Quick Test
@@ -126,35 +146,38 @@ python main.py --ghost --year 2024 --round 1 --driver1 VER --driver2 NOR
 ## 📁 Project Structure
 
 ```
-formula1-driving-assistant/
+formula1-ghost-car/
 ├── main.py              # Entry point with CLI argument handling
 ├── cli.py               # Interactive menu interface
-├── data_loader.py       # FastF1 API wrapper, data processing, corner classification
+├── data_loader.py       # FastF1 API wrapper, data processing
 ├── track_visualizer.py  # Matplotlib visualizations
-├── lap_replay.py        # Animated lap replay with car icon & status info
-├── ghost_comparison.py  # Ghost car comparison with 2-driver lap analysis
+├── lap_replay.py        # Single driver animated lap replay
+├── ghost_comparison.py  # Two-driver ghost car lap comparison
+├── race_replay.py       # Full race ghost car replay (all laps)
 ├── requirements.txt     # Python dependencies
 ├── README.md           
 └── .fastf1_cache/       # Auto-created cache directory
 ```
 
-## � How It Works
+## 📚 How It Works
 
 1. **Data Fetching**: Uses [FastF1](https://github.com/theOehrly/Fast-F1) library to download official F1 telemetry
-2. **Zone Detection**: Analyzes throttle, brake, and speed data to identify driving zones
-3. **Corner Detection**: Finds local speed minima to identify corners and their characteristics
-4. **Visualization**: Renders track using X/Y position data with animated car icons
+2. **Lap Extraction**: Gets the fastest lap from the selected session for each driver
+3. **Zone Detection**: Analyzes throttle, brake, and speed data to identify driving zones
+4. **Comparison**: Aligns laps by distance and calculates segment-by-segment deltas
+5. **Visualization**: Renders track with animated car icons and real-time telemetry
 
-## 🙏 Credits & References
+## 🔗 Related Projects
 
-- **[FastF1](https://github.com/theOehrly/Fast-F1)** — The excellent Python library that makes F1 data accessible
-- **[f1-race-replay](https://github.com/IAmTomShaw/f1-race-replay)** — Reference for visualization techniques
-- **F1 Data** — Telemetry provided by Formula 1
+- **[f1-race-replay](https://github.com/IAmTomShaw/f1-race-replay)** — Full race replay with all laps (different approach)
+- **[FastF1](https://github.com/theOehrly/Fast-F1)** — The Python library that makes F1 data accessible
 
 ## 🤝 Contributing
 
 Contributions welcome! Ideas for improvement:
-- [x] ~~Add lap comparison (overlay two drivers)~~ ✅ Ghost Car Comparison added!
+- [x] ~~Ghost Car lap comparison~~ ✅
+- [x] ~~Single driver lap replay~~ ✅
+- [x] ~~Ghost Car Race Replay (full race, all laps)~~ ✅
 - [ ] DRS zones visualization
 - [ ] Sector time breakdown
 - [ ] Export to video/animation
@@ -167,6 +190,6 @@ MIT License — feel free to use, modify, and share!
 ---
 
 <p align="center">
-  <b>Happy nerding! 🏁</b><br>
-  <i>Data is the new downforce.</i>
+  <b>Happy ghost hunting! 👻🏎️</b><br>
+  <i>See where champions make the difference.</i>
 </p>

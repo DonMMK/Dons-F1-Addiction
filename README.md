@@ -4,14 +4,16 @@ A collection of Formula 1 data analysis tools built with Python and the FastF1 l
 
 ## 📦 Features
 
-### 1. Formula Nerd Heaven (formerly F1 Driving Assistant)
-An interactive CLI tool for visualizing F1 telemetry with animated lap replays and driver comparisons.
+### 1. F1 Ghost Car 👻
+**Compare drivers lap-by-lap like never before.** An interactive CLI tool for ghost car comparisons and race replays.
 
 **Features:**
+- 👻 **Ghost Car Lap Comparison** - Compare two drivers' fastest laps head-to-head with animated replay
+- 🎬 **Single Driver Lap Replay** - Watch one driver's fastest lap unfold with live telemetry
+- 🏁 **Ghost Car Race Replay** - Full race comparison across all laps with gap evolution
 - 🗓️ Browse F1 calendars from 2018 onwards (including pre-season testing)
-- 🎬 Animated lap replays with live telemetry display
-- 👻 Ghost car comparisons between two drivers
-- 🏁 Driving zone analysis (braking points, acceleration zones, corners)
+
+> **Fastest Lap Modes** use the best lap from any session. **Race Replay** compares all laps from Race/Sprint sessions.
 
 ### 2. F1 Prediction
 Machine learning models for predicting race outcomes based on historical data, qualifying results, and track characteristics.
@@ -69,18 +71,20 @@ Statistical analysis to determine which car has the performance advantage across
 
 ## 🎮 Usage
 
-### Formula Nerd Heaven
+### F1 Ghost Car
 
 ```bash
-cd formula1-driving-assistant
+cd formula1-ghost-car
 python main.py
 ```
 
 Use the interactive CLI to:
-1. **Choose your mode first**: 🎬 Lap Replay or 👻 Ghost Comparison
+1. **Choose your mode**: 👻 Ghost Car Comparison, 🎬 Single Lap Replay, or 🏁 Race Replay
 2. Select a season (2018-2026)
 3. Choose a race or pre-season testing event
-4. Pick a session (Practice, Qualifying, Sprint, Race, or Testing)
+4. Pick a session:
+   - **Race Replay**: Requires Race (R) or Sprint (S) session
+   - **Other modes**: Any session (fastest lap is extracted)
 5. Select driver(s) based on your chosen mode
 
 ### F1 Prediction
@@ -103,7 +107,7 @@ python main.py
 
 ```
 Dons-F1-Addiction/
-├── formula1-driving-assistant/   # Telemetry visualization (Formula Nerd Heaven)
+├── formula1-ghost-car/           # Ghost Car comparison tool 👻
 │   ├── main.py                   # Entry point
 │   ├── cli.py                    # Interactive command-line interface
 │   ├── data_loader.py            # FastF1 data loading utilities
