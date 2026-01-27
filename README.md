@@ -148,3 +148,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Formula 1 for the incredible sport that fuels this addiction
 
 
+## Alternatives 
+https://openf1.org/
+
+https://my.sportmonks.com/subscriptions/create/sport/2/plans
