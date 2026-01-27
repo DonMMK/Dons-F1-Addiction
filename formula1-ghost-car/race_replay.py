@@ -2,12 +2,13 @@
 Formula 1 Ghost Car - Race Replay Module
 
 Full race ghost car comparison showing two drivers racing through all laps:
-- Two F1 car icons racing through each lap
-- Lap-by-lap gap evolution
-- Position tracking
-- Pit stop indicators
-- Real-time gap visualization
+- Two animated F1 car icons racing through each lap (like ghost comparison)
+- Track colored by who's faster on each lap
+- Real-time delta/gap display during the lap
+- Lap-by-lap gap evolution chart
+- Position tracking and pit stop indicators
 - Cumulative time comparison
+- Smooth transitions between laps
 """
 
 import matplotlib
@@ -32,8 +33,8 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 import matplotlib.gridspec as gridspec
 import numpy as np
 from typing import Optional, Tuple, List, Dict, Any
-from dataclasses import dataclass
-from scipy import interpolate
+from dataclasses import dataclass, field
+from scipy import interpolate as scipy_interpolate
 import colorsys
 
 from data_loader import (
@@ -45,7 +46,7 @@ from data_loader import (
     get_race_comparison_data,
 )
 
-# Import team colors from ghost_comparison
+# Import utilities from ghost_comparison
 from ghost_comparison import (
     TEAM_COLORS,
     DRIVER_TEAMS_BY_YEAR,
@@ -53,6 +54,7 @@ from ghost_comparison import (
     get_dynamic_driver_info,
     differentiate_same_team_colors,
     create_car_icon,
+    interpolate_telemetry_to_distance,
 )
 
 # Color scheme
@@ -92,6 +94,33 @@ def format_gap(gap_seconds: float) -> str:
 
 
 @dataclass
+class LapTelemetryPair:
+    """Synchronized telemetry data for a lap comparison."""
+    lap_num: int
+    # Driver 1 interpolated data
+    x1: np.ndarray
+    y1: np.ndarray
+    time1: np.ndarray
+    speed1: np.ndarray
+    angles1: np.ndarray
+    # Driver 2 interpolated data
+    x2: np.ndarray
+    y2: np.ndarray
+    time2: np.ndarray
+    speed2: np.ndarray
+    angles2: np.ndarray
+    # Common distance grid
+    common_distances: np.ndarray
+    # Segment colors
+    segment_colors: List[str] = field(default_factory=list)
+    # Lap info
+    lap_time1: float = 0.0
+    lap_time2: float = 0.0
+    delta: float = 0.0  # lap_time2 - lap_time1
+    has_telemetry: bool = True
+
+
+@dataclass
 class RaceComparison:
     """Container for race comparison analysis"""
     driver1: str
@@ -110,6 +139,7 @@ class RaceComparison:
     pit_laps2: List[int]
     winner: str
     final_gap: float
+    lap_telemetry_pairs: List[LapTelemetryPair] = field(default_factory=list)
 
 
 def analyze_race_comparison(
@@ -117,6 +147,7 @@ def analyze_race_comparison(
     race2: RaceData,
     session=None,
     year: int = 2024,
+    rotation: float = 0.0,
 ) -> RaceComparison:
     """
     Analyze full race comparison between two drivers.
@@ -126,9 +157,10 @@ def analyze_race_comparison(
         race2: RaceData for driver 2
         session: FastF1 session for color lookup
         year: Season year for team color lookup
+        rotation: Track rotation angle in degrees
     
     Returns:
-        RaceComparison with lap-by-lap analysis
+        RaceComparison with lap-by-lap analysis and synchronized telemetry
     """
     # Get team colors
     if session:
@@ -157,6 +189,10 @@ def analyze_race_comparison(
     lap_gaps = []
     pit_laps1 = []
     pit_laps2 = []
+    lap_telemetry_pairs = []
+    
+    color1_hex = "#{:02x}{:02x}{:02x}".format(*color1)
+    color2_hex = "#{:02x}{:02x}{:02x}".format(*color2)
     
     for lap_num in range(total_laps):
         lap1 = race1.laps[lap_num] if lap_num < len(race1.laps) else None
@@ -183,6 +219,17 @@ def analyze_race_comparison(
         # Gap: positive means driver2 is behind (driver1 is ahead)
         gap = cumulative_times2[-1] - cumulative_times1[-1]
         lap_gaps.append(gap)
+        
+        # Build synchronized telemetry for this lap
+        tel_pair = _build_lap_telemetry_pair(
+            lap_num=lap_num + 1,
+            lap1=lap1,
+            lap2=lap2,
+            color1_hex=color1_hex,
+            color2_hex=color2_hex,
+            rotation=rotation,
+        )
+        lap_telemetry_pairs.append(tel_pair)
     
     # Determine winner
     final_gap = lap_gaps[-1] if lap_gaps else 0
@@ -205,20 +252,168 @@ def analyze_race_comparison(
         pit_laps2=pit_laps2,
         winner=winner,
         final_gap=final_gap,
+        lap_telemetry_pairs=lap_telemetry_pairs,
+    )
+
+
+def _rotate_coords(x: np.ndarray, y: np.ndarray, rotation: float) -> Tuple[np.ndarray, np.ndarray]:
+    """Rotate coordinates by angle in degrees."""
+    if rotation == 0:
+        return x.copy(), y.copy()
+    
+    angle_rad = np.radians(rotation)
+    cos_a, sin_a = np.cos(angle_rad), np.sin(angle_rad)
+    
+    cx, cy = x.mean(), y.mean()
+    x_centered = x - cx
+    y_centered = y - cy
+    
+    x_rot = x_centered * cos_a - y_centered * sin_a + cx
+    y_rot = x_centered * sin_a + y_centered * cos_a + cy
+    
+    return x_rot, y_rot
+
+
+def _calculate_angles(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Calculate heading angles along the track."""
+    angles = np.zeros(len(x))
+    for i in range(len(x) - 1):
+        dx = x[i + 1] - x[i]
+        dy = y[i + 1] - y[i]
+        angles[i] = np.degrees(np.arctan2(dy, dx)) - 90
+    angles[-1] = angles[-2] if len(angles) > 1 else 0
+    
+    # Smooth angles
+    window = 5
+    if len(angles) >= window:
+        angles = np.convolve(angles, np.ones(window) / window, mode="same")
+    return angles
+
+
+def _build_segment_colors(
+    time1: np.ndarray,
+    time2: np.ndarray,
+    color1_hex: str,
+    color2_hex: str,
+    num_points: int,
+) -> List[str]:
+    """Build segment colors based on who's faster."""
+    colors = []
+    for i in range(num_points):
+        if i >= len(time1) or i >= len(time2):
+            colors.append("#888888")
+        elif abs(time1[i] - time2[i]) < 0.01:
+            colors.append("#888888")  # Equal
+        elif time1[i] < time2[i]:
+            colors.append(color1_hex)  # Driver 1 faster
+        else:
+            colors.append(color2_hex)  # Driver 2 faster
+    return colors
+
+
+def _build_lap_telemetry_pair(
+    lap_num: int,
+    lap1: Optional[RaceLapData],
+    lap2: Optional[RaceLapData],
+    color1_hex: str,
+    color2_hex: str,
+    rotation: float,
+) -> LapTelemetryPair:
+    """
+    Build synchronized telemetry data for a lap comparison.
+    
+    Interpolates both drivers' telemetry to a common distance grid,
+    calculates time deltas at each point, and determines segment colors.
+    """
+    # Check if we have telemetry for both
+    tel1 = lap1.telemetry if lap1 else None
+    tel2 = lap2.telemetry if lap2 else None
+    
+    has_telemetry = tel1 is not None and tel2 is not None
+    
+    if not has_telemetry:
+        # Return empty pair with just lap info
+        return LapTelemetryPair(
+            lap_num=lap_num,
+            x1=np.array([0]),
+            y1=np.array([0]),
+            time1=np.array([0]),
+            speed1=np.array([0]),
+            angles1=np.array([0]),
+            x2=np.array([0]),
+            y2=np.array([0]),
+            time2=np.array([0]),
+            speed2=np.array([0]),
+            angles2=np.array([0]),
+            common_distances=np.array([0]),
+            segment_colors=["#888888"],
+            lap_time1=lap1.lap_time_seconds if lap1 else 0,
+            lap_time2=lap2.lap_time_seconds if lap2 else 0,
+            delta=(lap2.lap_time_seconds if lap2 else 0) - (lap1.lap_time_seconds if lap1 else 0),
+            has_telemetry=False,
+        )
+    
+    # Create common distance grid
+    max_dist = min(tel1.distance.max(), tel2.distance.max())
+    min_dist = max(tel1.distance.min(), tel2.distance.min())
+    num_points = max(min(len(tel1.distance), len(tel2.distance)), 200)
+    common_distances = np.linspace(min_dist, max_dist, num_points)
+    
+    # Interpolate both to common grid
+    interp_tel1 = interpolate_telemetry_to_distance(tel1, common_distances)
+    interp_tel2 = interpolate_telemetry_to_distance(tel2, common_distances)
+    
+    # Rotate coordinates
+    x1, y1 = _rotate_coords(interp_tel1.x, interp_tel1.y, rotation)
+    x2, y2 = _rotate_coords(interp_tel2.x, interp_tel2.y, rotation)
+    
+    # Calculate angles
+    angles1 = _calculate_angles(x1, y1)
+    angles2 = _calculate_angles(x2, y2)
+    
+    # Build segment colors
+    segment_colors = _build_segment_colors(
+        interp_tel1.time, interp_tel2.time,
+        color1_hex, color2_hex, num_points
+    )
+    
+    lap_time1 = lap1.lap_time_seconds if lap1 else 0
+    lap_time2 = lap2.lap_time_seconds if lap2 else 0
+    
+    return LapTelemetryPair(
+        lap_num=lap_num,
+        x1=x1,
+        y1=y1,
+        time1=interp_tel1.time,
+        speed1=interp_tel1.speed,
+        angles1=angles1,
+        x2=x2,
+        y2=y2,
+        time2=interp_tel2.time,
+        speed2=interp_tel2.speed,
+        angles2=angles2,
+        common_distances=common_distances,
+        segment_colors=segment_colors,
+        lap_time1=lap_time1,
+        lap_time2=lap_time2,
+        delta=lap_time2 - lap_time1,
+        has_telemetry=True,
     )
 
 
 class RaceReplayAnimation:
     """
-    Full race ghost car replay animation.
+    Full race ghost car replay animation with frame-by-frame lap animation.
     
     Shows two drivers racing through all laps of a race with:
-    - Animated car icons on track
-    - Current lap indicator
-    - Running gap display
+    - Animated car icons racing around the track (like ghost lap comparison)
+    - Track colored by who's faster on each segment
+    - Real-time delta display during lap
+    - Running cumulative gap display
     - Position tracking
     - Pit stop indicators
     - Gap evolution chart
+    - Speed comparison
     
     Controls:
     - Space: Play/Pause
@@ -260,8 +455,9 @@ class RaceReplayAnimation:
         self.color1_hex = "#{:02x}{:02x}{:02x}".format(*self.color1)
         self.color2_hex = "#{:02x}{:02x}{:02x}".format(*self.color2)
         
-        # Find a reference lap with telemetry for track outline
-        self._find_reference_telemetry()
+        # Get the first lap with telemetry for frame calculations
+        self.current_tel_pair = self._get_current_tel_pair()
+        self.total_frames = len(self.current_tel_pair.x1) if self.current_tel_pair.has_telemetry else 100
         
         # Setup figure
         self._setup_figure()
@@ -269,165 +465,271 @@ class RaceReplayAnimation:
         
         self.animation = None
     
-    def _find_reference_telemetry(self):
-        """Find a lap with telemetry to use for track outline."""
-        self.reference_telemetry = None
-        
-        # Try to find any lap with telemetry
-        for lap in self.race1.laps[:10]:  # Check first 10 laps
-            if lap.telemetry is not None:
-                self.reference_telemetry = lap.telemetry
-                break
-        
-        if self.reference_telemetry is None:
-            for lap in self.race2.laps[:10]:
-                if lap.telemetry is not None:
-                    self.reference_telemetry = lap.telemetry
-                    break
-        
-        if self.reference_telemetry is None:
-            print("Warning: No telemetry data found for track visualization")
-    
-    def _rotate_coords(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Rotate coordinates by circuit rotation angle."""
-        if self.rotation == 0:
-            return x.copy(), y.copy()
-        
-        angle_rad = np.radians(self.rotation)
-        cos_a, sin_a = np.cos(angle_rad), np.sin(angle_rad)
-        
-        cx, cy = x.mean(), y.mean()
-        x_centered = x - cx
-        y_centered = y - cy
-        
-        x_rot = x_centered * cos_a - y_centered * sin_a + cx
-        y_rot = x_centered * sin_a + y_centered * cos_a + cy
-        
-        return x_rot, y_rot
-    
-    def _calculate_angles(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """Calculate heading angles along the track."""
-        angles = np.zeros(len(x))
-        for i in range(len(x) - 1):
-            dx = x[i + 1] - x[i]
-            dy = y[i + 1] - y[i]
-            angles[i] = np.degrees(np.arctan2(dy, dx)) - 90
-        angles[-1] = angles[-2]
-        
-        # Smooth angles
-        window = 5
-        angles = np.convolve(angles, np.ones(window) / window, mode="same")
-        return angles
+    def _get_current_tel_pair(self) -> LapTelemetryPair:
+        """Get telemetry pair for current lap."""
+        if self.current_lap < len(self.comparison.lap_telemetry_pairs):
+            return self.comparison.lap_telemetry_pairs[self.current_lap]
+        return self.comparison.lap_telemetry_pairs[0] if self.comparison.lap_telemetry_pairs else None
     
     def _setup_figure(self):
         """Setup the matplotlib figure and axes."""
-        self.fig = plt.figure(figsize=(18, 10), facecolor=COLORS["background"])
+        self.fig = plt.figure(figsize=(20, 12), facecolor=COLORS["background"])
         self.fig.canvas.manager.set_window_title(self.title)
         
-        # Grid layout
+        # Grid layout - similar to GhostComparisonReplay
         gs = gridspec.GridSpec(
-            3, 4,
+            5, 6,
             figure=self.fig,
-            height_ratios=[3, 1, 0.3],
-            width_ratios=[2, 1, 1, 1],
-            hspace=0.15,
-            wspace=0.2,
+            height_ratios=[0.12, 1, 0.25, 0.15, 0.08],
+            width_ratios=[2.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            hspace=0.12,
+            wspace=0.12,
         )
         
+        # Header with driver info
+        self.ax_header = self.fig.add_subplot(gs[0, :])
+        self.ax_header.set_facecolor(COLORS["background_light"])
+        self.ax_header.axis("off")
+        
         # Main track view
-        self.ax_track = self.fig.add_subplot(gs[0, 0:2])
+        self.ax_track = self.fig.add_subplot(gs[1, :4])
         self.ax_track.set_facecolor(COLORS["background"])
         self.ax_track.set_aspect("equal")
         self.ax_track.axis("off")
         
-        # Gap evolution chart
-        self.ax_gap = self.fig.add_subplot(gs[0, 2:4])
-        self.ax_gap.set_facecolor(COLORS["background_light"])
-        self.ax_gap.set_title("Gap Evolution", color=COLORS["text"], fontsize=12)
+        # Delta/gap panel
+        self.ax_delta = self.fig.add_subplot(gs[1, 4:])
+        self.ax_delta.set_facecolor(COLORS["background_light"])
+        self.ax_delta.axis("off")
+        
+        # Gap evolution chart (replacing telemetry panel)
+        self.ax_gap_chart = self.fig.add_subplot(gs[2, :4])
+        self.ax_gap_chart.set_facecolor(COLORS["background"])
+        
+        # Speed comparison
+        self.ax_speed = self.fig.add_subplot(gs[2, 4:])
+        self.ax_speed.set_facecolor(COLORS["background_light"])
+        self.ax_speed.axis("off")
         
         # Driver 1 info panel
-        self.ax_driver1 = self.fig.add_subplot(gs[1, 0])
-        self.ax_driver1.set_facecolor(COLORS["background_light"])
+        self.ax_driver1 = self.fig.add_subplot(gs[3, :3])
+        self.ax_driver1.set_facecolor(COLORS["background"])
         self.ax_driver1.axis("off")
         
         # Driver 2 info panel
-        self.ax_driver2 = self.fig.add_subplot(gs[1, 1])
-        self.ax_driver2.set_facecolor(COLORS["background_light"])
+        self.ax_driver2 = self.fig.add_subplot(gs[3, 3:])
+        self.ax_driver2.set_facecolor(COLORS["background"])
         self.ax_driver2.axis("off")
         
-        # Lap times comparison
-        self.ax_laptimes = self.fig.add_subplot(gs[1, 2:4])
-        self.ax_laptimes.set_facecolor(COLORS["background_light"])
-        self.ax_laptimes.set_title("Lap Times", color=COLORS["text"], fontsize=10)
+        # Progress bar
+        self.ax_progress = self.fig.add_subplot(gs[4, :4])
+        self.ax_progress.set_facecolor(COLORS["background"])
         
-        # Controls area
-        self.ax_controls = self.fig.add_subplot(gs[2, :])
-        self.ax_controls.set_facecolor(COLORS["background"])
-        self.ax_controls.axis("off")
-        
-        # Draw initial content
+        # Draw static elements
+        self._draw_header()
         self._draw_track()
+        self._draw_delta_panel()
         self._draw_gap_chart()
+        self._setup_speed_display()
         self._draw_driver_panels()
-        self._draw_lap_times_chart()
+        self._setup_progress_bar()
+        
+        # Create dynamic elements
         self._create_dynamic_elements()
     
+    def _draw_header(self):
+        """Draw header with driver comparison and lap info."""
+        self.ax_header.set_xlim(0, 1)
+        self.ax_header.set_ylim(0, 1)
+        
+        comp = self.comparison
+        
+        # Driver 1 info (left)
+        self.ax_header.add_patch(FancyBboxPatch(
+            (0.02, 0.15), 0.28, 0.7,
+            boxstyle="round,pad=0.02",
+            facecolor=self.color1_hex,
+            edgecolor="white", linewidth=2, alpha=0.8,
+            transform=self.ax_header.transAxes,
+        ))
+        self.ax_header.text(
+            0.16, 0.5, comp.driver1,
+            color="white", fontsize=18, fontweight="bold",
+            ha="center", va="center",
+        )
+        self.ax_header.text(
+            0.16, 0.2, comp.team1,
+            color="white", fontsize=9,
+            ha="center", va="center", alpha=0.8,
+        )
+        
+        # Current lap indicator (center)
+        self.lap_indicator = self.ax_header.text(
+            0.5, 0.65, f"LAP 1 / {self.total_laps}",
+            color=COLORS["text_highlight"], fontsize=24, fontweight="bold",
+            ha="center", va="center",
+        )
+        self.ax_header.text(
+            0.5, 0.3, "RACE REPLAY",
+            color=COLORS["text_dim"], fontsize=12,
+            ha="center", va="center",
+        )
+        
+        # Driver 2 info (right)
+        self.ax_header.add_patch(FancyBboxPatch(
+            (0.70, 0.15), 0.28, 0.7,
+            boxstyle="round,pad=0.02",
+            facecolor=self.color2_hex,
+            edgecolor="white", linewidth=2, alpha=0.8,
+            transform=self.ax_header.transAxes,
+        ))
+        self.ax_header.text(
+            0.84, 0.5, comp.driver2,
+            color="white", fontsize=18, fontweight="bold",
+            ha="center", va="center",
+        )
+        self.ax_header.text(
+            0.84, 0.2, comp.team2,
+            color="white", fontsize=9,
+            ha="center", va="center", alpha=0.8,
+        )
+    
     def _draw_track(self):
-        """Draw the track outline."""
-        if self.reference_telemetry is None:
+        """Draw track with color-coded segments."""
+        tel_pair = self._get_current_tel_pair()
+        
+        if not tel_pair.has_telemetry:
             self.ax_track.text(
-                0.5, 0.5,
-                "No track data available",
+                0.5, 0.5, f"No telemetry data for Lap {self.current_lap + 1}",
                 transform=self.ax_track.transAxes,
                 ha="center", va="center",
-                color=COLORS["text"],
-                fontsize=14,
+                color=COLORS["text"], fontsize=14,
             )
             return
         
-        x, y = self._rotate_coords(
-            self.reference_telemetry.x,
-            self.reference_telemetry.y
+        x, y = tel_pair.x1, tel_pair.y1
+        
+        # Create line segments with colors
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        colors = tel_pair.segment_colors[:len(segments)]
+        
+        # Draw outer track edge (neutral)
+        self.ax_track.plot(
+            x, y, color=COLORS["track_edge"], linewidth=22, alpha=0.3, zorder=1
         )
         
-        # Draw track outline
-        self.ax_track.plot(
-            x, y,
-            color=COLORS["track"],
-            linewidth=15,
-            solid_capstyle="round",
-            zorder=1,
-        )
-        self.ax_track.plot(
-            x, y,
-            color=COLORS["track_edge"],
-            linewidth=18,
-            solid_capstyle="round",
-            zorder=0,
-        )
+        # Draw colored segments
+        lc = LineCollection(segments, colors=colors, linewidth=14, alpha=0.85, zorder=2)
+        self.track_lc = self.ax_track.add_collection(lc)
         
-        # Add start/finish line
+        # Start/finish marker
         self.ax_track.scatter(
-            [x[0]], [y[0]],
-            c="white",
-            s=100,
-            marker="s",
-            zorder=5,
-            label="Start/Finish",
+            x[0], y[0], s=300, c="white", marker="s", zorder=5,
+            edgecolors="#00FF00", linewidths=3,
         )
-        
-        # Set limits with padding
-        padding = (x.max() - x.min()) * 0.1
-        self.ax_track.set_xlim(x.min() - padding, x.max() + padding)
-        self.ax_track.set_ylim(y.min() - padding, y.max() + padding)
+        self.ax_track.text(
+            x[0], y[0], "S/F",
+            color="#00FF00", fontsize=9, ha="center", va="center",
+            fontweight="bold", zorder=6,
+        )
         
         # Title
         self.ax_track.set_title(
-            f"LAP 1 / {self.total_laps}",
-            color=COLORS["text"],
-            fontsize=16,
-            fontweight="bold",
-            pad=10,
+            self.title, color="white", fontsize=14, fontweight="bold", pad=10
+        )
+        
+        # Legend
+        legend_elements = [
+            mpatches.Patch(facecolor=self.color1_hex, edgecolor="white",
+                          label=f"{self.comparison.driver1} faster"),
+            mpatches.Patch(facecolor=self.color2_hex, edgecolor="white",
+                          label=f"{self.comparison.driver2} faster"),
+            mpatches.Patch(facecolor="#888888", edgecolor="white", label="Equal"),
+        ]
+        legend = self.ax_track.legend(
+            handles=legend_elements, loc="upper left",
+            facecolor=COLORS["background_light"], edgecolor="white", fontsize=9, framealpha=0.9,
+        )
+        plt.setp(legend.get_texts(), color="white")
+        
+        # Set limits
+        padding = (x.max() - x.min()) * 0.08
+        self.ax_track.set_xlim(x.min() - padding, x.max() + padding)
+        self.ax_track.set_ylim(y.min() - padding, y.max() + padding)
+    
+    def _draw_delta_panel(self):
+        """Setup the delta/gap display panel."""
+        self.ax_delta.set_xlim(0, 1)
+        self.ax_delta.set_ylim(0, 1)
+        
+        # Title
+        self.ax_delta.text(
+            0.5, 0.95, "RACE GAP",
+            color="white", fontsize=12, fontweight="bold",
+            ha="center", va="top",
+        )
+        
+        # Cumulative gap display
+        self.ax_delta.text(
+            0.5, 0.82, "Race Gap",
+            color=COLORS["text_dim"], fontsize=10, ha="center", va="center",
+        )
+        self.race_gap_text = self.ax_delta.text(
+            0.5, 0.70, "+0.000s",
+            color="white", fontsize=24, fontweight="bold",
+            ha="center", va="center",
+        )
+        
+        # Lap delta display
+        self.ax_delta.text(
+            0.5, 0.55, "Lap Delta",
+            color=COLORS["text_dim"], fontsize=10, ha="center", va="center",
+        )
+        self.lap_delta_text = self.ax_delta.text(
+            0.5, 0.43, "+0.000s",
+            color="white", fontsize=18, fontweight="bold",
+            ha="center", va="center",
+        )
+        
+        # Gap bar visualization
+        self.ax_delta.add_patch(FancyBboxPatch(
+            (0.1, 0.28), 0.8, 0.08,
+            boxstyle="round,pad=0.01",
+            facecolor=COLORS["gauge_bg"], edgecolor=COLORS["text_dim"],
+            transform=self.ax_delta.transAxes,
+        ))
+        self.ax_delta.axvline(x=0.5, ymin=0.28, ymax=0.36, color="white", linewidth=2)
+        
+        self.delta_bar = self.ax_delta.add_patch(FancyBboxPatch(
+            (0.5, 0.29), 0.0, 0.06,
+            boxstyle="round,pad=0.005",
+            facecolor=self.color1_hex,
+            transform=self.ax_delta.transAxes,
+        ))
+        
+        # Driver labels for gap bar
+        self.ax_delta.text(
+            0.15, 0.23, self.comparison.driver1,
+            color=self.color1_hex, fontsize=10, fontweight="bold", ha="center",
+        )
+        self.ax_delta.text(
+            0.85, 0.23, self.comparison.driver2,
+            color=self.color2_hex, fontsize=10, fontweight="bold", ha="center",
+        )
+        
+        # Pit stop indicator
+        self.pit_indicator = self.ax_delta.text(
+            0.5, 0.12, "",
+            color=COLORS["pit_indicator"], fontsize=10, fontweight="bold",
+            ha="center", va="center",
+        )
+        
+        # Leader indicator
+        self.leader_text = self.ax_delta.text(
+            0.5, 0.03, "",
+            color=COLORS["text"], fontsize=11, fontweight="bold",
+            ha="center", va="center",
         )
     
     def _draw_gap_chart(self):
@@ -435,379 +737,398 @@ class RaceReplayAnimation:
         laps = list(range(1, self.total_laps + 1))
         gaps = self.comparison.lap_gaps
         
-        # Create color array based on who's ahead
-        colors = []
-        for gap in gaps:
-            if gap > 0:
-                colors.append(self.color1_hex)  # Driver 1 ahead
-            else:
-                colors.append(self.color2_hex)  # Driver 2 ahead
-        
         # Fill areas
-        self.ax_gap.fill_between(
-            laps,
-            [0] * len(gaps),
-            gaps,
+        self.ax_gap_chart.fill_between(
+            laps, [0] * len(gaps), gaps,
             where=[g > 0 for g in gaps],
-            color=self.color1_hex,
-            alpha=0.3,
+            color=self.color1_hex, alpha=0.3,
             label=f"{self.comparison.driver1} ahead",
         )
-        self.ax_gap.fill_between(
-            laps,
-            [0] * len(gaps),
-            gaps,
+        self.ax_gap_chart.fill_between(
+            laps, [0] * len(gaps), gaps,
             where=[g <= 0 for g in gaps],
-            color=self.color2_hex,
-            alpha=0.3,
+            color=self.color2_hex, alpha=0.3,
             label=f"{self.comparison.driver2} ahead",
         )
         
         # Plot line
-        self.ax_gap.plot(laps, gaps, color="white", linewidth=2, zorder=5)
+        self.ax_gap_chart.plot(laps, gaps, color="white", linewidth=2, zorder=5)
         
         # Zero line
-        self.ax_gap.axhline(y=0, color=COLORS["text_dim"], linewidth=1, linestyle="--")
+        self.ax_gap_chart.axhline(y=0, color=COLORS["text_dim"], linewidth=1, linestyle="--")
         
         # Mark pit stops
         for pit_lap in self.comparison.pit_laps1:
-            if pit_lap <= len(gaps):
-                self.ax_gap.axvline(
-                    x=pit_lap,
-                    color=self.color1_hex,
-                    linestyle=":",
-                    alpha=0.7,
-                )
+            self.ax_gap_chart.axvline(x=pit_lap, color=self.color1_hex, linestyle=":", alpha=0.7)
         for pit_lap in self.comparison.pit_laps2:
-            if pit_lap <= len(gaps):
-                self.ax_gap.axvline(
-                    x=pit_lap,
-                    color=self.color2_hex,
-                    linestyle=":",
-                    alpha=0.7,
-                )
+            self.ax_gap_chart.axvline(x=pit_lap, color=self.color2_hex, linestyle=":", alpha=0.7)
+        
+        # Progress marker
+        self.gap_marker = self.ax_gap_chart.axvline(
+            x=1, color=COLORS["text_highlight"], linewidth=2, zorder=10
+        )
         
         # Styling
-        self.ax_gap.set_xlabel("Lap", color=COLORS["text"])
-        self.ax_gap.set_ylabel("Gap (seconds)", color=COLORS["text"])
-        self.ax_gap.tick_params(colors=COLORS["text"])
-        self.ax_gap.set_xlim(1, self.total_laps)
+        self.ax_gap_chart.set_xlabel("Lap", color=COLORS["text"], fontsize=10)
+        self.ax_gap_chart.set_ylabel("Gap (s)", color=COLORS["text"], fontsize=10)
+        self.ax_gap_chart.tick_params(colors=COLORS["text"])
+        self.ax_gap_chart.set_xlim(1, self.total_laps)
         
-        # Add progress marker (will be updated during animation)
-        self.gap_marker = self.ax_gap.axvline(
-            x=1, color="yellow", linewidth=2, zorder=10
+        legend = self.ax_gap_chart.legend(
+            loc="upper right", facecolor=COLORS["background_light"],
+            edgecolor=COLORS["text_dim"], fontsize=9,
         )
+        plt.setp(legend.get_texts(), color=COLORS["text"])
         
-        self.ax_gap.legend(
-            loc="upper right",
-            facecolor=COLORS["background_light"],
-            edgecolor=COLORS["text_dim"],
-            labelcolor=COLORS["text"],
-        )
-        
-        # Set spine colors
-        for spine in self.ax_gap.spines.values():
+        for spine in self.ax_gap_chart.spines.values():
             spine.set_color(COLORS["text_dim"])
+        
+        self.ax_gap_chart.grid(True, alpha=0.2, color=COLORS["text_dim"])
+    
+    def _setup_speed_display(self):
+        """Setup the current speed comparison display."""
+        self.ax_speed.set_xlim(0, 1)
+        self.ax_speed.set_ylim(0, 1)
+        
+        # Title
+        self.ax_speed.text(
+            0.5, 0.95, "SPEED", color=COLORS["text_dim"], fontsize=10,
+            ha="center", va="top",
+        )
+        
+        # Driver 1 speed
+        self.ax_speed.add_patch(Circle(
+            (0.25, 0.65), 0.15,
+            facecolor=self.color1_hex, edgecolor="white", linewidth=2, alpha=0.3,
+            transform=self.ax_speed.transAxes,
+        ))
+        self.speed1_text = self.ax_speed.text(
+            0.25, 0.65, "0",
+            color="white", fontsize=18, fontweight="bold",
+            ha="center", va="center",
+        )
+        self.ax_speed.text(
+            0.25, 0.45, self.comparison.driver1,
+            color=self.color1_hex, fontsize=9, fontweight="bold", ha="center",
+        )
+        
+        # Driver 2 speed
+        self.ax_speed.add_patch(Circle(
+            (0.75, 0.65), 0.15,
+            facecolor=self.color2_hex, edgecolor="white", linewidth=2, alpha=0.3,
+            transform=self.ax_speed.transAxes,
+        ))
+        self.speed2_text = self.ax_speed.text(
+            0.75, 0.65, "0",
+            color="white", fontsize=18, fontweight="bold",
+            ha="center", va="center",
+        )
+        self.ax_speed.text(
+            0.75, 0.45, self.comparison.driver2,
+            color=self.color2_hex, fontsize=9, fontweight="bold", ha="center",
+        )
+        
+        # Speed difference
+        self.ax_speed.text(
+            0.5, 0.25, "Δ Speed", color=COLORS["text_dim"], fontsize=9, ha="center",
+        )
+        self.speed_diff_text = self.ax_speed.text(
+            0.5, 0.12, "+0 km/h",
+            color="white", fontsize=12, fontweight="bold", ha="center",
+        )
     
     def _draw_driver_panels(self):
         """Draw driver info panels."""
-        # Driver 1
-        self.ax_driver1.add_patch(Rectangle(
-            (0, 0), 1, 1,
-            facecolor=self.color1_hex,
-            alpha=0.3,
+        comp = self.comparison
+        
+        # Driver 1 panel
+        self.ax_driver1.set_xlim(0, 1)
+        self.ax_driver1.set_ylim(0, 1)
+        
+        self.ax_driver1.add_patch(FancyBboxPatch(
+            (0.02, 0.1), 0.96, 0.8,
+            boxstyle="round,pad=0.02",
+            facecolor=COLORS["background_light"], edgecolor=self.color1_hex,
+            linewidth=2, alpha=0.6,
             transform=self.ax_driver1.transAxes,
         ))
         
-        self.driver1_name = self.ax_driver1.text(
-            0.5, 0.8,
-            self.comparison.driver1,
-            transform=self.ax_driver1.transAxes,
-            ha="center", va="center",
-            color=COLORS["text"],
-            fontsize=20,
-            fontweight="bold",
+        self.ax_driver1.text(
+            0.5, 0.85, f"{comp.driver1}",
+            color=self.color1_hex, fontsize=14, fontweight="bold", ha="center",
         )
         
-        self.driver1_team = self.ax_driver1.text(
-            0.5, 0.55,
-            self.comparison.team1,
-            transform=self.ax_driver1.transAxes,
-            ha="center", va="center",
-            color=COLORS["text_dim"],
-            fontsize=10,
+        self.driver1_pos_text = self.ax_driver1.text(
+            0.25, 0.5, "P1",
+            color=COLORS["text_highlight"], fontsize=24, fontweight="bold", ha="center",
         )
         
-        self.driver1_position = self.ax_driver1.text(
-            0.5, 0.3,
-            "P1",
-            transform=self.ax_driver1.transAxes,
-            ha="center", va="center",
-            color=COLORS["text_highlight"],
-            fontsize=24,
-            fontweight="bold",
+        self.driver1_laptime_text = self.ax_driver1.text(
+            0.7, 0.55, "Lap: --",
+            color=COLORS["text"], fontsize=11, ha="center",
         )
         
-        self.driver1_laptime = self.ax_driver1.text(
-            0.5, 0.1,
-            "---",
-            transform=self.ax_driver1.transAxes,
-            ha="center", va="center",
-            color=COLORS["text"],
-            fontsize=12,
+        self.driver1_total_text = self.ax_driver1.text(
+            0.7, 0.35, "Total: --",
+            color=COLORS["text_dim"], fontsize=10, ha="center",
         )
         
-        # Driver 2
-        self.ax_driver2.add_patch(Rectangle(
-            (0, 0), 1, 1,
-            facecolor=self.color2_hex,
-            alpha=0.3,
+        # Driver 2 panel
+        self.ax_driver2.set_xlim(0, 1)
+        self.ax_driver2.set_ylim(0, 1)
+        
+        self.ax_driver2.add_patch(FancyBboxPatch(
+            (0.02, 0.1), 0.96, 0.8,
+            boxstyle="round,pad=0.02",
+            facecolor=COLORS["background_light"], edgecolor=self.color2_hex,
+            linewidth=2, alpha=0.6,
             transform=self.ax_driver2.transAxes,
         ))
         
-        self.driver2_name = self.ax_driver2.text(
-            0.5, 0.8,
-            self.comparison.driver2,
-            transform=self.ax_driver2.transAxes,
-            ha="center", va="center",
-            color=COLORS["text"],
-            fontsize=20,
-            fontweight="bold",
+        self.ax_driver2.text(
+            0.5, 0.85, f"{comp.driver2}",
+            color=self.color2_hex, fontsize=14, fontweight="bold", ha="center",
         )
         
-        self.driver2_team = self.ax_driver2.text(
-            0.5, 0.55,
-            self.comparison.team2,
-            transform=self.ax_driver2.transAxes,
-            ha="center", va="center",
-            color=COLORS["text_dim"],
-            fontsize=10,
+        self.driver2_pos_text = self.ax_driver2.text(
+            0.25, 0.5, "P2",
+            color=COLORS["text_highlight"], fontsize=24, fontweight="bold", ha="center",
         )
         
-        self.driver2_position = self.ax_driver2.text(
-            0.5, 0.3,
-            "P2",
-            transform=self.ax_driver2.transAxes,
-            ha="center", va="center",
-            color=COLORS["text_highlight"],
-            fontsize=24,
-            fontweight="bold",
+        self.driver2_laptime_text = self.ax_driver2.text(
+            0.7, 0.55, "Lap: --",
+            color=COLORS["text"], fontsize=11, ha="center",
         )
         
-        self.driver2_laptime = self.ax_driver2.text(
-            0.5, 0.1,
-            "---",
-            transform=self.ax_driver2.transAxes,
-            ha="center", va="center",
-            color=COLORS["text"],
-            fontsize=12,
+        self.driver2_total_text = self.ax_driver2.text(
+            0.7, 0.35, "Total: --",
+            color=COLORS["text_dim"], fontsize=10, ha="center",
         )
     
-    def _draw_lap_times_chart(self):
-        """Draw lap times comparison chart."""
-        # This will show recent lap times
-        self.ax_laptimes.set_xlim(0, 10)
-        self.ax_laptimes.set_ylim(0, 1)
-        self.ax_laptimes.axis("off")
+    def _setup_progress_bar(self):
+        """Setup lap progress bar."""
+        self.ax_progress.set_xlim(0, 100)
+        self.ax_progress.set_ylim(0, 1)
+        self.ax_progress.axis("off")
         
-        self.laptimes_text = self.ax_laptimes.text(
-            0.5, 0.5,
-            "Lap times will appear here",
-            transform=self.ax_laptimes.transAxes,
-            ha="center", va="center",
-            color=COLORS["text_dim"],
-            fontsize=10,
-        )
+        # Background
+        self.ax_progress.barh([0.5], [100], height=0.4, color=COLORS["gauge_bg"], alpha=0.5)
+        
+        # Progress bar
+        self.progress_bar = self.ax_progress.barh(
+            [0.5], [0], height=0.4, color=COLORS["text_highlight"], alpha=0.8
+        )[0]
+        
+        # Distance markers
+        for pct in [0, 25, 50, 75, 100]:
+            self.ax_progress.axvline(x=pct, color=COLORS["text_dim"], linewidth=0.5, alpha=0.5)
+            self.ax_progress.text(
+                pct, 0.1, f"{pct}%", color=COLORS["text_dim"], fontsize=8, ha="center"
+            )
     
     def _create_dynamic_elements(self):
-        """Create elements that will be updated during animation."""
-        if self.reference_telemetry is None:
-            self.car1 = None
-            self.car2 = None
+        """Create car icons and trails."""
+        tel_pair = self._get_current_tel_pair()
+        
+        if not tel_pair.has_telemetry:
+            self.car1_patch = None
+            self.car2_patch = None
             return
         
-        x, y = self._rotate_coords(
-            self.reference_telemetry.x,
-            self.reference_telemetry.y
-        )
-        angles = self._calculate_angles(x, y)
-        
-        # Store track data for animation
-        self.track_x = x
-        self.track_y = y
-        self.track_angles = angles
-        
-        # Create car icons at start position
-        self.car1 = create_car_icon(
+        # Driver 1 car
+        self.car1_patch = create_car_icon(
             self.ax_track,
-            x[0], y[0],
-            angle=angles[0],
-            size=1.2,
-            color=self.color1_hex,
+            tel_pair.x1[0], tel_pair.y1[0],
+            tel_pair.angles1[0],
+            size=1.0, color=self.color1_hex,
         )
-        self.ax_track.add_patch(self.car1)
+        self.ax_track.add_patch(self.car1_patch)
         
-        self.car2 = create_car_icon(
+        # Driver 2 car
+        self.car2_patch = create_car_icon(
             self.ax_track,
-            x[0], y[0],
-            angle=angles[0],
-            size=1.2,
-            color=self.color2_hex,
+            tel_pair.x2[0], tel_pair.y2[0],
+            tel_pair.angles2[0],
+            size=1.0, color=self.color2_hex,
         )
-        self.ax_track.add_patch(self.car2)
+        self.ax_track.add_patch(self.car2_patch)
         
-        # Driver labels
+        # Trails
+        self.trail_length = 60
+        (self.trail1,) = self.ax_track.plot(
+            [], [], "-", color=self.color1_hex, linewidth=4, alpha=0.4, zorder=9
+        )
+        (self.trail2,) = self.ax_track.plot(
+            [], [], "-", color=self.color2_hex, linewidth=4, alpha=0.4, zorder=9
+        )
+        
+        # Driver labels above cars
+        label_offset = (tel_pair.y1.max() - tel_pair.y1.min()) * 0.04
         self.label1 = self.ax_track.text(
-            x[0], y[0] + 500,
+            tel_pair.x1[0], tel_pair.y1[0] + label_offset,
             self.comparison.driver1,
-            ha="center", va="bottom",
-            color=self.color1_hex,
-            fontsize=10,
-            fontweight="bold",
-            zorder=20,
+            color="white", fontsize=8, fontweight="bold",
+            ha="center", va="bottom", zorder=20,
+            bbox=dict(boxstyle="round,pad=0.2", facecolor=self.color1_hex, alpha=0.8),
         )
-        
         self.label2 = self.ax_track.text(
-            x[0], y[0] + 500,
+            tel_pair.x2[0], tel_pair.y2[0] + label_offset,
             self.comparison.driver2,
-            ha="center", va="bottom",
-            color=self.color2_hex,
-            fontsize=10,
-            fontweight="bold",
-            zorder=20,
+            color="white", fontsize=8, fontweight="bold",
+            ha="center", va="bottom", zorder=20,
+            bbox=dict(boxstyle="round,pad=0.2", facecolor=self.color2_hex, alpha=0.8),
+        )
+    
+    def _redraw_track_for_lap(self):
+        """Redraw track with colors for current lap."""
+        tel_pair = self._get_current_tel_pair()
+        
+        # Clear track axis and redraw
+        self.ax_track.clear()
+        self.ax_track.set_facecolor(COLORS["background"])
+        self.ax_track.set_aspect("equal")
+        self.ax_track.axis("off")
+        
+        if not tel_pair.has_telemetry:
+            self.ax_track.text(
+                0.5, 0.5, f"No telemetry for Lap {self.current_lap + 1}",
+                transform=self.ax_track.transAxes,
+                ha="center", va="center",
+                color=COLORS["text"], fontsize=14,
+            )
+            self.car1_patch = None
+            self.car2_patch = None
+            return
+        
+        x, y = tel_pair.x1, tel_pair.y1
+        
+        # Create line segments with colors
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        colors = tel_pair.segment_colors[:len(segments)]
+        
+        # Draw outer track edge
+        self.ax_track.plot(
+            x, y, color=COLORS["track_edge"], linewidth=22, alpha=0.3, zorder=1
         )
         
-        # Gap display
-        self.gap_text = self.ax_track.text(
-            0.5, 0.95,
-            "GAP: 0.000s",
-            transform=self.ax_track.transAxes,
-            ha="center", va="top",
-            color=COLORS["text"],
-            fontsize=16,
-            fontweight="bold",
-            bbox=dict(
-                boxstyle="round,pad=0.3",
-                facecolor=COLORS["background_light"],
-                edgecolor=COLORS["text_dim"],
-            ),
-            zorder=25,
+        # Draw colored segments
+        lc = LineCollection(segments, colors=colors, linewidth=14, alpha=0.85, zorder=2)
+        self.ax_track.add_collection(lc)
+        
+        # Start/finish marker
+        self.ax_track.scatter(
+            x[0], y[0], s=300, c="white", marker="s", zorder=5,
+            edgecolors="#00FF00", linewidths=3,
+        )
+        self.ax_track.text(
+            x[0], y[0], "S/F",
+            color="#00FF00", fontsize=9, ha="center", va="center",
+            fontweight="bold", zorder=6,
         )
         
-        # Pit indicator
-        self.pit_text = self.ax_track.text(
-            0.5, 0.05,
-            "",
-            transform=self.ax_track.transAxes,
-            ha="center", va="bottom",
-            color=COLORS["pit_indicator"],
-            fontsize=14,
-            fontweight="bold",
-            zorder=25,
+        # Title
+        self.ax_track.set_title(
+            self.title, color="white", fontsize=14, fontweight="bold", pad=10
         )
+        
+        # Legend
+        legend_elements = [
+            mpatches.Patch(facecolor=self.color1_hex, edgecolor="white",
+                          label=f"{self.comparison.driver1} faster"),
+            mpatches.Patch(facecolor=self.color2_hex, edgecolor="white",
+                          label=f"{self.comparison.driver2} faster"),
+        ]
+        legend = self.ax_track.legend(
+            handles=legend_elements, loc="upper left",
+            facecolor=COLORS["background_light"], edgecolor="white", fontsize=9,
+        )
+        plt.setp(legend.get_texts(), color="white")
+        
+        # Set limits
+        padding = (x.max() - x.min()) * 0.08
+        self.ax_track.set_xlim(x.min() - padding, x.max() + padding)
+        self.ax_track.set_ylim(y.min() - padding, y.max() + padding)
+        
+        # Recreate dynamic elements
+        self._create_dynamic_elements()
     
     def _setup_controls(self):
         """Setup playback controls."""
-        # Buttons
-        self.btn_play_ax = self.fig.add_axes([0.3, 0.02, 0.08, 0.04])
-        self.btn_play = Button(
-            self.btn_play_ax, "▶ Play",
-            color=COLORS["gauge_bg"],
-            hovercolor=COLORS["background_light"],
-        )
-        self.btn_play.label.set_color(COLORS["text"])
-        self.btn_play.on_clicked(self._on_play)
+        ax_play = self.fig.add_axes([0.30, 0.01, 0.08, 0.03])
+        ax_pause = self.fig.add_axes([0.39, 0.01, 0.08, 0.03])
+        ax_reset = self.fig.add_axes([0.48, 0.01, 0.08, 0.03])
+        ax_prev = self.fig.add_axes([0.20, 0.01, 0.08, 0.03])
+        ax_next = self.fig.add_axes([0.58, 0.01, 0.08, 0.03])
+        ax_speed = self.fig.add_axes([0.70, 0.015, 0.15, 0.02])
         
-        self.btn_pause_ax = self.fig.add_axes([0.4, 0.02, 0.08, 0.04])
-        self.btn_pause = Button(
-            self.btn_pause_ax, "⏸ Pause",
-            color=COLORS["gauge_bg"],
-            hovercolor=COLORS["background_light"],
-        )
-        self.btn_pause.label.set_color(COLORS["text"])
-        self.btn_pause.on_clicked(self._on_pause)
+        self.btn_play = Button(ax_play, "▶ Play", color=COLORS["gauge_bg"], hovercolor="#00FF00")
+        self.btn_pause = Button(ax_pause, "⏸ Pause", color=COLORS["gauge_bg"], hovercolor=COLORS["text_dim"])
+        self.btn_reset = Button(ax_reset, "⏹ Reset", color=COLORS["gauge_bg"], hovercolor="#FF4444")
+        self.btn_prev = Button(ax_prev, "◀ Prev", color=COLORS["gauge_bg"], hovercolor=COLORS["text_dim"])
+        self.btn_next = Button(ax_next, "Next ▶", color=COLORS["gauge_bg"], hovercolor=COLORS["text_dim"])
         
-        self.btn_reset_ax = self.fig.add_axes([0.5, 0.02, 0.08, 0.04])
-        self.btn_reset = Button(
-            self.btn_reset_ax, "⟲ Reset",
-            color=COLORS["gauge_bg"],
-            hovercolor=COLORS["background_light"],
-        )
-        self.btn_reset.label.set_color(COLORS["text"])
-        self.btn_reset.on_clicked(self._on_reset)
-        
-        # Previous/Next lap buttons
-        self.btn_prev_ax = self.fig.add_axes([0.15, 0.02, 0.08, 0.04])
-        self.btn_prev = Button(
-            self.btn_prev_ax, "◀ Prev",
-            color=COLORS["gauge_bg"],
-            hovercolor=COLORS["background_light"],
-        )
-        self.btn_prev.label.set_color(COLORS["text"])
-        self.btn_prev.on_clicked(self._on_prev_lap)
-        
-        self.btn_next_ax = self.fig.add_axes([0.65, 0.02, 0.08, 0.04])
-        self.btn_next = Button(
-            self.btn_next_ax, "Next ▶",
-            color=COLORS["gauge_bg"],
-            hovercolor=COLORS["background_light"],
-        )
-        self.btn_next.label.set_color(COLORS["text"])
-        self.btn_next.on_clicked(self._on_next_lap)
-        
-        # Speed slider
-        self.slider_ax = self.fig.add_axes([0.78, 0.02, 0.15, 0.04])
-        self.speed_slider = Slider(
-            self.slider_ax,
-            "Speed",
-            0.25, 4.0,
-            valinit=self.playback_speed,
-            valstep=0.25,
+        self.slider_speed = Slider(
+            ax_speed, "Speed", 0.25, 4.0,
+            valinit=self.playback_speed, valstep=0.25,
             color=COLORS["text_highlight"],
         )
-        self.speed_slider.label.set_color(COLORS["text"])
-        self.speed_slider.valtext.set_color(COLORS["text"])
-        self.speed_slider.on_changed(self._on_speed_change)
         
-        # Keyboard controls
+        self.btn_play.on_clicked(self._on_play)
+        self.btn_pause.on_clicked(self._on_pause)
+        self.btn_reset.on_clicked(self._on_reset)
+        self.btn_prev.on_clicked(self._on_prev_lap)
+        self.btn_next.on_clicked(self._on_next_lap)
+        self.slider_speed.on_changed(self._on_speed_change)
+        
         self.fig.canvas.mpl_connect("key_press_event", self._on_key_press)
+        
+        self.fig.text(
+            0.02, 0.01,
+            "Controls: Space=Play/Pause | R=Reset | ←→=Prev/Next Lap | +/-=Speed",
+            color=COLORS["text_dim"], fontsize=9,
+        )
     
     def _on_play(self, event=None):
-        """Start playback."""
-        self.is_playing = True
-        if self.animation is None:
-            self._start_animation()
+        if not self.is_playing:
+            self.is_playing = True
+            if self.animation is None:
+                self._start_animation()
     
     def _on_pause(self, event=None):
-        """Pause playback."""
         self.is_playing = False
     
     def _on_reset(self, event=None):
-        """Reset to beginning."""
+        self.is_playing = False
         self.current_lap = 0
         self.current_frame = 0
-        self._update_display()
+        self.current_tel_pair = self._get_current_tel_pair()
+        self.total_frames = len(self.current_tel_pair.x1) if self.current_tel_pair.has_telemetry else 100
+        self._redraw_track_for_lap()
+        self._update_frame(0)
     
     def _on_prev_lap(self, event=None):
-        """Go to previous lap."""
         if self.current_lap > 0:
             self.current_lap -= 1
             self.current_frame = 0
-            self._update_display()
+            self.current_tel_pair = self._get_current_tel_pair()
+            self.total_frames = len(self.current_tel_pair.x1) if self.current_tel_pair.has_telemetry else 100
+            self._redraw_track_for_lap()
+            self._update_frame(0)
     
     def _on_next_lap(self, event=None):
-        """Go to next lap."""
         if self.current_lap < self.total_laps - 1:
             self.current_lap += 1
             self.current_frame = 0
-            self._update_display()
+            self.current_tel_pair = self._get_current_tel_pair()
+            self.total_frames = len(self.current_tel_pair.x1) if self.current_tel_pair.has_telemetry else 100
+            self._redraw_track_for_lap()
+            self._update_frame(0)
     
     def _on_speed_change(self, val):
-        """Handle speed slider change."""
         self.playback_speed = val
     
     def _on_key_press(self, event):
-        """Handle keyboard input."""
         if event.key == " ":
             if self.is_playing:
                 self._on_pause()
@@ -815,195 +1136,213 @@ class RaceReplayAnimation:
                 self._on_play()
         elif event.key == "r":
             self._on_reset()
-        elif event.key == "left":
-            self._on_prev_lap()
         elif event.key == "right":
             self._on_next_lap()
-        elif event.key == "+":
-            new_speed = min(4.0, self.playback_speed + 0.25)
-            self.speed_slider.set_val(new_speed)
+        elif event.key == "left":
+            self._on_prev_lap()
+        elif event.key in ["+", "="]:
+            self.playback_speed = min(self.playback_speed + 0.25, 4.0)
+            self.slider_speed.set_val(self.playback_speed)
         elif event.key == "-":
-            new_speed = max(0.25, self.playback_speed - 0.25)
-            self.speed_slider.set_val(new_speed)
+            self.playback_speed = max(self.playback_speed - 0.25, 0.25)
+            self.slider_speed.set_val(self.playback_speed)
     
-    def _update_display(self):
-        """Update all display elements for current lap."""
-        lap_idx = self.current_lap
+    def _update_frame(self, frame_idx: int):
+        """Update all dynamic elements for the given frame."""
+        tel_pair = self.current_tel_pair
         
-        # Update track title
-        self.ax_track.set_title(
-            f"LAP {lap_idx + 1} / {self.total_laps}",
-            color=COLORS["text"],
-            fontsize=16,
-            fontweight="bold",
-            pad=10,
+        if not tel_pair.has_telemetry or self.car1_patch is None:
+            return []
+        
+        frame_idx = int(frame_idx) % self.total_frames
+        
+        # Get positions
+        x1, y1 = tel_pair.x1[frame_idx], tel_pair.y1[frame_idx]
+        x2, y2 = tel_pair.x2[frame_idx], tel_pair.y2[frame_idx]
+        
+        # Update car 1
+        self.car1_patch.remove()
+        self.car1_patch = create_car_icon(
+            self.ax_track, x1, y1, tel_pair.angles1[frame_idx],
+            size=1.0, color=self.color1_hex,
+        )
+        self.ax_track.add_patch(self.car1_patch)
+        
+        # Update car 2
+        self.car2_patch.remove()
+        self.car2_patch = create_car_icon(
+            self.ax_track, x2, y2, tel_pair.angles2[frame_idx],
+            size=1.0, color=self.color2_hex,
+        )
+        self.ax_track.add_patch(self.car2_patch)
+        
+        # Update trails
+        trail_start = max(0, frame_idx - self.trail_length)
+        self.trail1.set_data(
+            tel_pair.x1[trail_start:frame_idx + 1],
+            tel_pair.y1[trail_start:frame_idx + 1]
+        )
+        self.trail2.set_data(
+            tel_pair.x2[trail_start:frame_idx + 1],
+            tel_pair.y2[trail_start:frame_idx + 1]
         )
         
-        # Update gap marker on chart
-        self.gap_marker.set_xdata([lap_idx + 1, lap_idx + 1])
+        # Update driver labels
+        label_offset = (tel_pair.y1.max() - tel_pair.y1.min()) * 0.04
+        self.label1.set_position((x1, y1 + label_offset))
+        self.label2.set_position((x2, y2 + label_offset))
         
-        # Get current lap data
+        # Current times and deltas
+        time1 = tel_pair.time1[frame_idx]
+        time2 = tel_pair.time2[frame_idx]
+        lap_delta = time2 - time1  # Positive = driver1 ahead in this lap
+        
+        # Race gap (cumulative)
+        lap_idx = self.current_lap
+        if lap_idx > 0 and lap_idx <= len(self.comparison.lap_gaps):
+            prev_gap = self.comparison.lap_gaps[lap_idx - 1]
+        else:
+            prev_gap = 0
+        race_gap = prev_gap + lap_delta
+        
+        # Update lap indicator
+        self.lap_indicator.set_text(f"LAP {self.current_lap + 1} / {self.total_laps}")
+        
+        # Update delta displays
+        if lap_delta > 0:
+            self.lap_delta_text.set_text(f"+{lap_delta:.3f}s")
+            self.lap_delta_text.set_color(self.color1_hex)
+        else:
+            self.lap_delta_text.set_text(f"{lap_delta:.3f}s")
+            self.lap_delta_text.set_color(self.color2_hex)
+        
+        if race_gap > 0:
+            self.race_gap_text.set_text(f"+{race_gap:.3f}s")
+            self.race_gap_text.set_color(self.color1_hex)
+            self.leader_text.set_text(f"{self.comparison.driver1} leads")
+            self.leader_text.set_color(self.color1_hex)
+            delta_width = min(abs(race_gap) * 0.02, 0.35)
+            self.delta_bar.set_x(0.5 - delta_width)
+            self.delta_bar.set_width(delta_width)
+            self.delta_bar.set_facecolor(self.color1_hex)
+        else:
+            self.race_gap_text.set_text(f"{race_gap:.3f}s")
+            self.race_gap_text.set_color(self.color2_hex)
+            self.leader_text.set_text(f"{self.comparison.driver2} leads")
+            self.leader_text.set_color(self.color2_hex)
+            delta_width = min(abs(race_gap) * 0.02, 0.35)
+            self.delta_bar.set_x(0.5)
+            self.delta_bar.set_width(delta_width)
+            self.delta_bar.set_facecolor(self.color2_hex)
+        
+        # Update speed displays
+        speed1 = tel_pair.speed1[frame_idx]
+        speed2 = tel_pair.speed2[frame_idx]
+        speed_diff = speed1 - speed2
+        
+        self.speed1_text.set_text(f"{speed1:.0f}")
+        self.speed2_text.set_text(f"{speed2:.0f}")
+        
+        if speed_diff > 0:
+            self.speed_diff_text.set_text(f"+{speed_diff:.0f} km/h")
+            self.speed_diff_text.set_color(self.color1_hex)
+        else:
+            self.speed_diff_text.set_text(f"{speed_diff:.0f} km/h")
+            self.speed_diff_text.set_color(self.color2_hex)
+        
+        # Update gap chart marker
+        progress_in_lap = frame_idx / self.total_frames
+        chart_x = self.current_lap + 1 + progress_in_lap
+        self.gap_marker.set_xdata([chart_x, chart_x])
+        
+        # Update progress bar
+        progress = (frame_idx / self.total_frames) * 100
+        self.progress_bar.set_width(progress)
+        
+        # Update driver panels
         if lap_idx < len(self.race1.laps):
             lap1 = self.race1.laps[lap_idx]
-            self.driver1_position.set_text(f"P{lap1.position}")
-            self.driver1_laptime.set_text(format_time(lap1.lap_time_seconds))
+            self.driver1_pos_text.set_text(f"P{lap1.position}")
+            self.driver1_laptime_text.set_text(f"Lap: {format_time(lap1.lap_time_seconds)}")
+            self.driver1_total_text.set_text(f"Total: {format_time(lap1.cumulative_time)}")
         
         if lap_idx < len(self.race2.laps):
             lap2 = self.race2.laps[lap_idx]
-            self.driver2_position.set_text(f"P{lap2.position}")
-            self.driver2_laptime.set_text(format_time(lap2.lap_time_seconds))
+            self.driver2_pos_text.set_text(f"P{lap2.position}")
+            self.driver2_laptime_text.set_text(f"Lap: {format_time(lap2.lap_time_seconds)}")
+            self.driver2_total_text.set_text(f"Total: {format_time(lap2.cumulative_time)}")
         
-        # Update gap display
-        if lap_idx < len(self.comparison.lap_gaps):
-            gap = self.comparison.lap_gaps[lap_idx]
-            leader = self.comparison.driver1 if gap > 0 else self.comparison.driver2
-            self.gap_text.set_text(f"GAP: {format_gap(abs(gap))}\n{leader} leads")
-        
-        # Check for pit stops
+        # Pit stop indicator
         pit_text = ""
-        if (lap_idx + 1) in self.comparison.pit_laps1:
+        if (self.current_lap + 1) in self.comparison.pit_laps1:
             pit_text += f"🔧 {self.comparison.driver1} PIT  "
-        if (lap_idx + 1) in self.comparison.pit_laps2:
+        if (self.current_lap + 1) in self.comparison.pit_laps2:
             pit_text += f"🔧 {self.comparison.driver2} PIT"
-        self.pit_text.set_text(pit_text)
+        self.pit_indicator.set_text(pit_text)
         
-        # Update lap times display
-        self._update_laptimes_display(lap_idx)
-        
-        self.fig.canvas.draw_idle()
+        return [self.car1_patch, self.car2_patch, self.trail1, self.trail2]
     
-    def _update_laptimes_display(self, lap_idx: int):
-        """Update the lap times comparison display."""
-        # Show last 5 laps
-        start_lap = max(0, lap_idx - 4)
-        
-        text_lines = []
-        text_lines.append(f"{'Lap':>4} | {self.comparison.driver1:>8} | {self.comparison.driver2:>8} | {'Delta':>8}")
-        text_lines.append("-" * 45)
-        
-        for i in range(start_lap, lap_idx + 1):
-            if i < len(self.race1.laps) and i < len(self.race2.laps):
-                t1 = self.race1.laps[i].lap_time_seconds
-                t2 = self.race2.laps[i].lap_time_seconds
-                delta = t1 - t2
-                
-                t1_str = f"{t1:7.3f}s"
-                t2_str = f"{t2:7.3f}s"
-                delta_str = f"{delta:+7.3f}s"
-                
-                # Mark current lap
-                marker = "→" if i == lap_idx else " "
-                text_lines.append(f"{marker}{i+1:>3} | {t1_str} | {t2_str} | {delta_str}")
-        
-        self.laptimes_text.set_text("\n".join(text_lines))
-        self.laptimes_text.set_fontfamily("monospace")
-    
-    def _animate_lap(self, frame):
-        """Animate a single frame within a lap."""
-        if not self.is_playing:
-            return []
-        
-        if self.reference_telemetry is None:
-            return []
-        
-        lap_idx = self.current_lap
-        
-        # Get telemetry for current lap
-        tel1 = self.race1.laps[lap_idx].telemetry if lap_idx < len(self.race1.laps) else None
-        tel2 = self.race2.laps[lap_idx].telemetry if lap_idx < len(self.race2.laps) else None
-        
-        # If no telemetry, use reference track
-        if tel1 is None:
-            x1, y1 = self.track_x, self.track_y
-        else:
-            x1, y1 = self._rotate_coords(tel1.x, tel1.y)
-        
-        if tel2 is None:
-            x2, y2 = self.track_x, self.track_y
-        else:
-            x2, y2 = self._rotate_coords(tel2.x, tel2.y)
-        
-        # Calculate positions based on frame and lap times
-        num_frames = max(len(x1), len(x2))
-        frame_skip = int(self.playback_speed * 2)
-        
-        self.current_frame += frame_skip
-        
-        # Calculate indices
-        idx1 = min(self.current_frame, len(x1) - 1)
-        idx2 = min(self.current_frame, len(x2) - 1)
-        
-        # Update car positions
-        if self.car1 is not None:
-            self.car1.remove()
-            angles1 = self._calculate_angles(x1, y1)
-            self.car1 = create_car_icon(
-                self.ax_track,
-                x1[idx1], y1[idx1],
-                angle=angles1[idx1],
-                size=1.2,
-                color=self.color1_hex,
-            )
-            self.ax_track.add_patch(self.car1)
-            self.label1.set_position((x1[idx1], y1[idx1] + 500))
-        
-        if self.car2 is not None:
-            self.car2.remove()
-            angles2 = self._calculate_angles(x2, y2)
-            self.car2 = create_car_icon(
-                self.ax_track,
-                x2[idx2], y2[idx2],
-                angle=angles2[idx2],
-                size=1.2,
-                color=self.color2_hex,
-            )
-            self.ax_track.add_patch(self.car2)
-            self.label2.set_position((x2[idx2], y2[idx2] + 500))
-        
-        # Check if lap is complete
-        if self.current_frame >= num_frames - 1:
-            self.current_frame = 0
-            self.current_lap += 1
+    def _animate(self, frame):
+        """Animation frame callback."""
+        if self.is_playing:
+            tel_pair = self.current_tel_pair
             
-            if self.current_lap >= self.total_laps:
-                self.is_playing = False
-                self.current_lap = self.total_laps - 1
-                self._show_final_result()
-            else:
-                self._update_display()
+            if tel_pair.has_telemetry:
+                # Calculate frames to advance
+                lap_duration = tel_pair.lap_time1 if tel_pair.lap_time1 > 0 else 90
+                frames_per_interval = int(
+                    self.playback_speed * (self.total_frames / (lap_duration * self.fps))
+                )
+                frames_per_interval = max(1, frames_per_interval)
+                
+                self.current_frame += frames_per_interval
+                
+                # Check if lap complete
+                if self.current_frame >= self.total_frames:
+                    self.current_frame = 0
+                    self.current_lap += 1
+                    
+                    if self.current_lap >= self.total_laps:
+                        self.is_playing = False
+                        self.current_lap = self.total_laps - 1
+                        self._show_final_result()
+                    else:
+                        # Move to next lap
+                        self.current_tel_pair = self._get_current_tel_pair()
+                        self.total_frames = len(self.current_tel_pair.x1) if self.current_tel_pair.has_telemetry else 100
+                        self._redraw_track_for_lap()
         
-        return [self.car1, self.car2] if self.car1 and self.car2 else []
+        return self._update_frame(self.current_frame)
     
     def _show_final_result(self):
         """Show final race result."""
         winner = self.comparison.winner
         gap = abs(self.comparison.final_gap)
         
-        result_text = f"🏁 RACE COMPLETE 🏁\n\n"
-        result_text += f"Winner: {winner}\n"
-        result_text += f"Gap: {format_gap(gap)}"
-        
-        self.gap_text.set_text(result_text)
+        self.race_gap_text.set_text("🏁 FINISHED")
+        self.race_gap_text.set_color(COLORS["text_highlight"])
+        self.leader_text.set_text(f"Winner: {winner} by {format_gap(gap)}")
+        self.leader_text.set_color(COLORS["text_highlight"])
         self.fig.canvas.draw_idle()
     
     def _start_animation(self):
         """Start the animation."""
+        interval = 1000 / self.fps
         self.animation = FuncAnimation(
-            self.fig,
-            self._animate_lap,
-            interval=1000 // self.fps,
-            blit=False,
-            cache_frame_data=False,
+            self.fig, self._animate,
+            interval=interval, blit=False, cache_frame_data=False,
         )
     
     def show(self):
         """Display the animation."""
-        self._update_display()
-        plt.tight_layout()
+        self._update_frame(0)
+        self._start_animation()
         plt.show()
     
     def close(self):
         """Close the figure."""
+        if self.animation:
+            self.animation.event_source.stop()
         plt.close(self.fig)
 
 
@@ -1164,6 +1503,13 @@ def run_race_replay(
     
     console = Console()
     
+    # Get circuit info for rotation first
+    circuit_info = get_circuit_info(session)
+    rotation = circuit_info.get("rotation", 0) if circuit_info else 0
+    
+    # Get year for team colors
+    year = session.event.year if hasattr(session, "event") else 2024
+    
     # Load race data
     with Progress(
         SpinnerColumn(),
@@ -1192,23 +1538,20 @@ def run_race_replay(
     console.print(f"[green]✓ Loaded {race1.total_laps} laps for {driver1}[/green]")
     console.print(f"[green]✓ Loaded {race2.total_laps} laps for {driver2}[/green]")
     
-    # Get circuit info for rotation
-    circuit_info = get_circuit_info(session)
-    rotation = circuit_info.get("rotation", 0) if circuit_info else 0
-    
-    # Get year for team colors
-    year = session.event.year if hasattr(session, "event") else 2024
-    
-    # Analyze comparison
+    # Analyze comparison (with rotation for synchronized telemetry)
     with Progress(
         SpinnerColumn(),
-        TextColumn("[cyan]Analyzing race comparison...[/cyan]"),
+        TextColumn("[cyan]Analyzing race comparison and building lap telemetry...[/cyan]"),
         console=console,
     ) as progress:
         progress.add_task("analyzing", total=None)
-        comparison = analyze_race_comparison(race1, race2, session, year)
+        comparison = analyze_race_comparison(race1, race2, session, year, rotation)
+    
+    # Count laps with telemetry
+    laps_with_telemetry = sum(1 for tel_pair in comparison.lap_telemetry_pairs if tel_pair.has_telemetry)
     
     console.print(f"[green]✓ Analysis complete - {comparison.total_laps} laps compared[/green]")
+    console.print(f"[green]✓ {laps_with_telemetry} laps have telemetry for animation[/green]")
     console.print(f"[yellow]Winner: {comparison.winner} by {format_gap(abs(comparison.final_gap))}[/yellow]")
     
     # Show summary plot
@@ -1221,6 +1564,7 @@ def run_race_replay(
     if show_replay:
         console.print("\n[cyan]Starting race replay animation...[/cyan]")
         console.print("[dim]Controls: Space=Play/Pause, R=Reset, ←/→=Prev/Next Lap, +/-=Speed[/dim]")
+        console.print("[dim]Two ghost cars will race through each lap with real-time delta tracking![/dim]")
         
         replay = RaceReplayAnimation(
             race1=race1,

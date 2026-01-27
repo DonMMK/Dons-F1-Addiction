@@ -72,21 +72,47 @@ Static analysis view showing:
 - **Lap Times Comparison** — Side-by-side lap time traces
 - **Race Summary** — Final result, pit stops, laps completed
 
-#### Animated Race Replay
-Watch both drivers race through every lap:
-- **Two F1 car icons** — Racing through each lap in sequence
-- **Lap counter** — Current lap / Total laps
-- **Running gap display** — Real-time gap showing who leads
+#### Animated Race Replay (Full Ghost Car Experience!)
+Watch both drivers race through every lap with the **same quality animation as Ghost Lap Comparison**:
+
+**Track Visualization:**
+- **Color-coded track sections** — Each lap shows who is faster where (team colors)
+- **Start/finish marker** — Green S/F indicator
+- **Legend** — Shows which color represents which driver's faster sections
+
+**Car Animation:**
+- **Two F1 car icons** — Team-colored cars racing frame-by-frame through each lap
+- **Trailing effect** — Colored trails behind each car showing recent path
+- **Driver labels** — Badges above each car with driver code
+
+**Real-time Gap Display:**
+- **Race Gap** — Cumulative gap showing total race advantage
+- **Lap Delta** — Current lap time delta updating in real-time
+- **Gap bar** — Visual indicator showing who's ahead and by how much
+- **Leader indicator** — Text showing which driver leads
+
+**Telemetry Panel:**
+- **Live speed display** — Both drivers' speeds with difference
+- **Gap evolution chart** — Progress marker moves through lap positions
 - **Pit stop indicators** — Visual markers when drivers pit
-- **Gap evolution chart** — Progress marker showing current position in race
-- **Driver info panels** — Position, lap time, team colors
+
+**Driver Info Panels:**
+- **Position** — Current race position
+- **Lap time** — Current lap time
+- **Cumulative time** — Total race time
+
+**Progress & Controls:**
+- **Lap counter** — Current lap / Total laps in header
+- **Progress bar** — Shows position within current lap
+- **Smooth lap transitions** — Track redraws with new colors for each lap
 
 #### Race Replay Controls
 - `Space` — Play/Pause
 - `R` — Reset to lap 1
 - `←/→` — Previous/Next lap
-- `+/-` — Adjust playback speed
-- GUI buttons and speed slider
+- `+/-` — Adjust playback speed (0.25x to 4x)
+- GUI buttons: Play, Pause, Reset, Prev, Next
+- Speed slider for precise control
 
 ### Playback Controls (All Modes)
 - `Space` — Play/Pause
