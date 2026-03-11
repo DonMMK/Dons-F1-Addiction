@@ -93,6 +93,64 @@ def format_gap(gap_seconds: float) -> str:
     return f"{sign}{gap_seconds:.3f}s"
 
 
+def detect_drs_zones(telemetry: 'TelemetryData') -> List[Tuple[int, int]]:
+    """
+    Detect DRS zones from telemetry data.
+    
+    DRS values in FastF1:
+    - 0-9: DRS disabled/off
+    - 10-14: DRS available (in detection zone or eligible)
+    - 12, 14: DRS actually open/deployed
+    
+    Returns list of (start_idx, end_idx) tuples for DRS zones where DRS can be used.
+    """
+    if telemetry is None or not hasattr(telemetry, 'drs') or telemetry.drs is None:
+        return []
+    
+    drs = telemetry.drs
+    zones = []
+    in_zone = False
+    zone_start = 0
+    
+    for i, val in enumerate(drs):
+        # DRS available/open when value >= 10
+        is_drs_zone = val >= 10
+        
+        if is_drs_zone and not in_zone:
+            zone_start = i
+            in_zone = True
+        elif not is_drs_zone and in_zone:
+            # Only add zones with meaningful length
+            if i - zone_start > 5:
+                zones.append((zone_start, i))
+            in_zone = False
+    
+    # Handle zone at end of lap
+    if in_zone and len(drs) - zone_start > 5:
+        zones.append((zone_start, len(drs) - 1))
+    
+    return zones
+
+
+def merge_drs_zones(zones: List[Tuple[int, int]], gap_threshold: int = 20) -> List[Tuple[int, int]]:
+    """
+    Merge nearby DRS zones to reduce visual clutter.
+    Zones within gap_threshold indices of each other are merged.
+    """
+    if not zones:
+        return []
+    
+    merged = [zones[0]]
+    for start, end in zones[1:]:
+        prev_start, prev_end = merged[-1]
+        if start - prev_end <= gap_threshold:
+            # Merge with previous zone
+            merged[-1] = (prev_start, end)
+        else:
+            merged.append((start, end))
+    return merged
+
+
 @dataclass
 class LapTelemetryPair:
     """Synchronized telemetry data for a lap comparison."""
@@ -113,6 +171,8 @@ class LapTelemetryPair:
     common_distances: np.ndarray
     # Segment colors
     segment_colors: List[str] = field(default_factory=list)
+    # DRS zones as (start_idx, end_idx) pairs
+    drs_zones: List[Tuple[int, int]] = field(default_factory=list)
     # Lap info
     lap_time1: float = 0.0
     lap_time2: float = 0.0
@@ -377,6 +437,23 @@ def _build_lap_telemetry_pair(
         color1_hex, color2_hex, num_points
     )
     
+    # Detect DRS zones from driver 1's telemetry (zones are the same for all drivers)
+    drs_zones = detect_drs_zones(tel1)
+    
+    # Scale DRS zone indices to match interpolated points
+    if drs_zones and len(tel1.distance) > 0:
+        scale_factor = num_points / len(tel1.distance)
+        scaled_zones = []
+        for start, end in drs_zones:
+            scaled_start = int(start * scale_factor)
+            scaled_end = int(end * scale_factor)
+            # Clamp to valid range
+            scaled_start = max(0, min(scaled_start, num_points - 1))
+            scaled_end = max(0, min(scaled_end, num_points - 1))
+            if scaled_end > scaled_start:
+                scaled_zones.append((scaled_start, scaled_end))
+        drs_zones = merge_drs_zones(scaled_zones)
+    
     lap_time1 = lap1.lap_time_seconds if lap1 else 0
     lap_time2 = lap2.lap_time_seconds if lap2 else 0
     
@@ -394,6 +471,7 @@ def _build_lap_telemetry_pair(
         angles2=angles2,
         common_distances=common_distances,
         segment_colors=segment_colors,
+        drs_zones=drs_zones,
         lap_time1=lap_time1,
         lap_time2=lap_time2,
         delta=lap_time2 - lap_time1,
@@ -408,6 +486,7 @@ class RaceReplayAnimation:
     Shows two drivers racing through all laps of a race with:
     - Animated car icons racing around the track (like ghost lap comparison)
     - Track colored by who's faster on each segment
+    - DRS zones highlighted on track
     - Real-time delta display during lap
     - Running cumulative gap display
     - Position tracking
@@ -419,8 +498,11 @@ class RaceReplayAnimation:
     - Space: Play/Pause
     - R: Reset to lap 1
     - Left/Right: Previous/Next lap
+    - Up/Down: Navigate within lap (forward/backward frames)
+    - Page Up/Down: Jump larger increments within lap
     - +/-: Adjust playback speed
     - L: Jump to specific lap
+    - D: Toggle DRS zone display
     """
     
     def __init__(
@@ -448,6 +530,10 @@ class RaceReplayAnimation:
         self.current_frame = 0
         self.is_playing = False
         self.total_laps = comparison.total_laps
+        
+        # DRS zone display state
+        self.show_drs_zones = True
+        self.drs_zone_patches = []
         
         # Colors
         self.color1 = comparison.driver1_color
@@ -595,7 +681,7 @@ class RaceReplayAnimation:
         )
     
     def _draw_track(self):
-        """Draw track with color-coded segments."""
+        """Draw track with color-coded segments and DRS zones."""
         tel_pair = self._get_current_tel_pair()
         
         if not tel_pair.has_telemetry:
@@ -619,6 +705,9 @@ class RaceReplayAnimation:
             x, y, color=COLORS["track_edge"], linewidth=22, alpha=0.3, zorder=1
         )
         
+        # Draw DRS zones if enabled
+        self._draw_drs_zones(tel_pair)
+        
         # Draw colored segments
         lc = LineCollection(segments, colors=colors, linewidth=14, alpha=0.85, zorder=2)
         self.track_lc = self.ax_track.add_collection(lc)
@@ -639,7 +728,7 @@ class RaceReplayAnimation:
             self.title, color="white", fontsize=14, fontweight="bold", pad=10
         )
         
-        # Legend
+        # Legend - include DRS if showing zones
         legend_elements = [
             mpatches.Patch(facecolor=self.color1_hex, edgecolor="white",
                           label=f"{self.comparison.driver1} faster"),
@@ -647,6 +736,11 @@ class RaceReplayAnimation:
                           label=f"{self.comparison.driver2} faster"),
             mpatches.Patch(facecolor="#888888", edgecolor="white", label="Equal"),
         ]
+        if self.show_drs_zones and tel_pair.drs_zones:
+            legend_elements.append(
+                mpatches.Patch(facecolor="#00FFFF", edgecolor="white", 
+                              alpha=0.5, label="DRS Zone")
+            )
         legend = self.ax_track.legend(
             handles=legend_elements, loc="upper left",
             facecolor=COLORS["background_light"], edgecolor="white", fontsize=9, framealpha=0.9,
@@ -657,6 +751,55 @@ class RaceReplayAnimation:
         padding = (x.max() - x.min()) * 0.08
         self.ax_track.set_xlim(x.min() - padding, x.max() + padding)
         self.ax_track.set_ylim(y.min() - padding, y.max() + padding)
+    
+    def _draw_drs_zones(self, tel_pair: LapTelemetryPair):
+        """Draw DRS zones on the track."""
+        # Clear existing DRS zone patches
+        for patch in self.drs_zone_patches:
+            if patch in self.ax_track.patches:
+                patch.remove()
+        self.drs_zone_patches = []
+        
+        if not self.show_drs_zones or not tel_pair.drs_zones:
+            return
+        
+        x, y = tel_pair.x1, tel_pair.y1
+        
+        for start_idx, end_idx in tel_pair.drs_zones:
+            # Get the segment of track for this DRS zone
+            zone_x = x[start_idx:end_idx+1]
+            zone_y = y[start_idx:end_idx+1]
+            
+            if len(zone_x) < 2:
+                continue
+            
+            # Draw DRS zone as a thicker line underneath the track
+            line, = self.ax_track.plot(
+                zone_x, zone_y, 
+                color="#00FFFF", linewidth=28, alpha=0.35, 
+                zorder=0, solid_capstyle='round'
+            )
+            self.drs_zone_patches.append(line)
+            
+            # Add "DRS" label at the start of the zone
+            mid_idx = len(zone_x) // 2
+            if mid_idx < len(zone_x):
+                # Calculate perpendicular offset for label
+                dx = zone_x[min(mid_idx+1, len(zone_x)-1)] - zone_x[max(mid_idx-1, 0)]
+                dy = zone_y[min(mid_idx+1, len(zone_y)-1)] - zone_y[max(mid_idx-1, 0)]
+                length = np.sqrt(dx**2 + dy**2)
+                if length > 0:
+                    # Perpendicular direction
+                    offset = (y.max() - y.min()) * 0.03
+                    label_x = zone_x[mid_idx] - (dy / length) * offset
+                    label_y = zone_y[mid_idx] + (dx / length) * offset
+                    
+                    text = self.ax_track.text(
+                        label_x, label_y, "DRS",
+                        color="#00FFFF", fontsize=8, fontweight="bold",
+                        ha="center", va="center", alpha=0.9, zorder=3
+                    )
+                    self.drs_zone_patches.append(text)
     
     def _draw_delta_panel(self):
         """Setup the delta/gap display panel."""
@@ -989,6 +1132,9 @@ class RaceReplayAnimation:
         self.ax_track.set_aspect("equal")
         self.ax_track.axis("off")
         
+        # Clear DRS zone patches list
+        self.drs_zone_patches = []
+        
         if not tel_pair.has_telemetry:
             self.ax_track.text(
                 0.5, 0.5, f"No telemetry for Lap {self.current_lap + 1}",
@@ -1012,6 +1158,9 @@ class RaceReplayAnimation:
             x, y, color=COLORS["track_edge"], linewidth=22, alpha=0.3, zorder=1
         )
         
+        # Draw DRS zones if enabled
+        self._draw_drs_zones(tel_pair)
+        
         # Draw colored segments
         lc = LineCollection(segments, colors=colors, linewidth=14, alpha=0.85, zorder=2)
         self.ax_track.add_collection(lc)
@@ -1032,13 +1181,18 @@ class RaceReplayAnimation:
             self.title, color="white", fontsize=14, fontweight="bold", pad=10
         )
         
-        # Legend
+        # Legend - include DRS if showing zones
         legend_elements = [
             mpatches.Patch(facecolor=self.color1_hex, edgecolor="white",
                           label=f"{self.comparison.driver1} faster"),
             mpatches.Patch(facecolor=self.color2_hex, edgecolor="white",
                           label=f"{self.comparison.driver2} faster"),
         ]
+        if self.show_drs_zones and tel_pair.drs_zones:
+            legend_elements.append(
+                mpatches.Patch(facecolor="#00FFFF", edgecolor="white", 
+                              alpha=0.5, label="DRS Zone")
+            )
         legend = self.ax_track.legend(
             handles=legend_elements, loc="upper left",
             facecolor=COLORS["background_light"], edgecolor="white", fontsize=9,
@@ -1085,7 +1239,7 @@ class RaceReplayAnimation:
         
         self.fig.text(
             0.02, 0.01,
-            "Controls: Space=Play/Pause | R=Reset | ←→=Prev/Next Lap | +/-=Speed",
+            "Keys: Space=Play/Pause | ←→=Laps | ↑↓=Within Lap | PgUp/Dn=Jump | D=DRS | +/-=Speed",
             color=COLORS["text_dim"], fontsize=9,
         )
     
@@ -1137,15 +1291,72 @@ class RaceReplayAnimation:
         elif event.key == "r":
             self._on_reset()
         elif event.key == "right":
+            # Right arrow: Next lap
             self._on_next_lap()
         elif event.key == "left":
+            # Left arrow: Previous lap
             self._on_prev_lap()
+        elif event.key == "up":
+            # Up arrow: Move forward within lap (small increment)
+            self._navigate_within_lap(forward=True, large=False)
+        elif event.key == "down":
+            # Down arrow: Move backward within lap (small increment)
+            self._navigate_within_lap(forward=False, large=False)
+        elif event.key == "pageup":
+            # Page Up: Move forward within lap (large increment)
+            self._navigate_within_lap(forward=True, large=True)
+        elif event.key == "pagedown":
+            # Page Down: Move backward within lap (large increment)
+            self._navigate_within_lap(forward=False, large=True)
         elif event.key in ["+", "="]:
             self.playback_speed = min(self.playback_speed + 0.25, 4.0)
             self.slider_speed.set_val(self.playback_speed)
         elif event.key == "-":
             self.playback_speed = max(self.playback_speed - 0.25, 0.25)
             self.slider_speed.set_val(self.playback_speed)
+        elif event.key == "d":
+            # D key: Toggle DRS zone display
+            self._toggle_drs_zones()
+        elif event.key == "home":
+            # Home key: Go to start of current lap
+            self.current_frame = 0
+            self._update_frame(0)
+            self.fig.canvas.draw_idle()
+        elif event.key == "end":
+            # End key: Go to end of current lap
+            self.current_frame = self.total_frames - 1
+            self._update_frame(self.current_frame)
+            self.fig.canvas.draw_idle()
+    
+    def _navigate_within_lap(self, forward: bool = True, large: bool = False):
+        """
+        Navigate within the current lap.
+        
+        Args:
+            forward: True to move forward, False to move backward
+            large: True for large increment (10%), False for small (1%)
+        """
+        # Pause playback when manually navigating
+        self.is_playing = False
+        
+        # Calculate increment (1% for small, 10% for large)
+        increment = int(self.total_frames * (0.10 if large else 0.01))
+        increment = max(1, increment)  # At least 1 frame
+        
+        if forward:
+            self.current_frame = min(self.current_frame + increment, self.total_frames - 1)
+        else:
+            self.current_frame = max(self.current_frame - increment, 0)
+        
+        self._update_frame(self.current_frame)
+        self.fig.canvas.draw_idle()
+    
+    def _toggle_drs_zones(self):
+        """Toggle DRS zone display on/off."""
+        self.show_drs_zones = not self.show_drs_zones
+        self._redraw_track_for_lap()
+        self._update_frame(self.current_frame)
+        self.fig.canvas.draw_idle()
     
     def _update_frame(self, frame_idx: int):
         """Update all dynamic elements for the given frame."""
@@ -1563,8 +1774,13 @@ def run_race_replay(
     # Show replay
     if show_replay:
         console.print("\n[cyan]Starting race replay animation...[/cyan]")
-        console.print("[dim]Controls: Space=Play/Pause, R=Reset, ←/→=Prev/Next Lap, +/-=Speed[/dim]")
-        console.print("[dim]Two ghost cars will race through each lap with real-time delta tracking![/dim]")
+        console.print("[dim]Controls:[/dim]")
+        console.print("[dim]  Space = Play/Pause  |  R = Reset[/dim]")
+        console.print("[dim]  ←/→ = Previous/Next Lap[/dim]")
+        console.print("[dim]  ↑/↓ = Navigate within lap (small)  |  PgUp/PgDn = Jump (large)[/dim]")
+        console.print("[dim]  Home/End = Start/End of lap  |  D = Toggle DRS zones[/dim]")
+        console.print("[dim]  +/- = Adjust playback speed[/dim]")
+        console.print("[dim]DRS zones shown in cyan on track. Two ghost cars race through each lap![/dim]")
         
         replay = RaceReplayAnimation(
             race1=race1,

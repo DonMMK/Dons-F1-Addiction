@@ -81,9 +81,16 @@ class RaceSimulator:
         try:
             row = self.grid_df[self.grid_df["Abbreviation"] == driver_abbr]
             if not row.empty:
+                # Try qualifying times first (Q3 > Q2 > Q1)
                 for q in ["Q3", "Q2", "Q1"]:
-                    val = row[q].values[0]
-                    if pd.notna(val) and val != "":
+                    if q in row.columns:
+                        val = row[q].values[0]
+                        if pd.notna(val) and val != "":
+                            return val.total_seconds()
+                # Fall back to best lap time from practice sessions
+                if "LapTime" in row.columns:
+                    val = row["LapTime"].values[0]
+                    if pd.notna(val):
                         return val.total_seconds()
         except:
             pass
@@ -236,29 +243,65 @@ def main():
     parser.add_argument("--year", type=int, default=2026)
     parser.add_argument("--gp", type=str, default="Great Britain")
     parser.add_argument(
-        "--session", type=str, required=True, choices=["FP1", "FP2", "Q"]
+        "--session", type=str, required=True, choices=["FP1", "FP2", "FP3", "Q"]
     )
     args = parser.parse_args()
 
-    if args.session != "Q":
-        return
-
+    console = Console()
     analyzer = TelemetryAnalyzer(args.year, args.gp, args.session)
     session = analyzer.load_data()
-    if session:
-        try:
-            session.load()
-        except:
+    
+    if not session:
+        console.print(f"[red]Could not load {args.session} data for {args.gp} {args.year}[/red]")
+        return
+    
+    try:
+        session.load()
+    except Exception as e:
+        console.print(f"[red]Error loading session: {e}[/red]")
+        return
+
+    # For practice sessions, build driver data from lap times
+    if args.session in ["FP1", "FP2", "FP3"]:
+        # Get best lap time per driver from practice
+        laps = session.laps
+        if laps.empty:
+            console.print(f"[red]No lap data available for {args.session}[/red]")
             return
+        
+        # Find fastest lap per driver
+        best_laps = laps.loc[laps.groupby("Driver")["LapTime"].idxmin()]
+        best_laps = best_laps[["Driver", "LapTime"]].copy()
+        best_laps = best_laps.rename(columns={"Driver": "Abbreviation"})
+        best_laps = best_laps.sort_values("LapTime").reset_index(drop=True)
+        best_laps["GridPosition"] = range(1, len(best_laps) + 1)  # Estimated grid from FP pace
+        
+        grid_data = best_laps
+        session_label = f"{args.session} (Preliminary)"
+    else:
+        grid_data = session.results
+        session_label = "Qualifying"
 
-        sim = RaceSimulator(session.results, args.gp)
-        win_counts = sim.run_simulation()
+    sim = RaceSimulator(grid_data, args.gp)
+    win_counts = sim.run_simulation()
 
-        sorted_wins = sorted(win_counts.items(), key=lambda x: x[1], reverse=True)
-        if sorted_wins:
-            top_driver, wins = sorted_wins[0]
+    sorted_wins = sorted(win_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    if sorted_wins:
+        # Build results table
+        table = Table(title=f"{args.gp} GP {args.year} - Race Prediction ({session_label})")
+        table.add_column("Pos", style="cyan", justify="right")
+        table.add_column("Driver", style="white")
+        table.add_column("Win Probability", style="green", justify="right")
+        
+        for i, (driver, wins) in enumerate(sorted_wins[:10], 1):
             prob = (wins / Config.MONTE_CARLO_RUNS) * 100
-            print(f"│ {top_driver}    │ {prob:.1f}% │")
+            table.add_row(str(i), driver, f"{prob:.1f}%")
+        
+        console.print(table)
+        
+        if args.session in ["FP1", "FP2", "FP3"]:
+            console.print(f"\n[yellow]⚠ Based on {args.session} pace - predictions will improve after qualifying[/yellow]")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,20 @@ A collection of Formula 1 data analysis tools built with Python and the FastF1 l
 - 🎬 **Single Driver Lap Replay** - Watch one driver's fastest lap unfold with live telemetry
 - 🏁 **Ghost Car Race Replay** - Full race comparison across all laps with gap evolution
 - 🗓️ Browse F1 calendars from 2018 onwards (including pre-season testing)
+- 🟦 **DRS Zones** - DRS activation zones highlighted on track (toggle with D key)
+- 🎮 **Full Replay Control** - Navigate by lap (←/→) or within laps (↑/↓), jump with Page Up/Down
+
+**Race Replay Keyboard Controls:**
+| Key | Action |
+|-----|--------|
+| Space | Play/Pause |
+| ←/→ | Previous/Next Lap |
+| ↑/↓ | Navigate within lap (1% increments) |
+| Page Up/Down | Jump within lap (10% increments) |
+| Home/End | Jump to start/end of lap |
+| D | Toggle DRS zone display |
+| R | Reset to lap 1 |
+| +/- | Adjust playback speed |
 
 > **Fastest Lap Modes** use the best lap from any session. **Race Replay** compares all laps from Race/Sprint sessions.
 
