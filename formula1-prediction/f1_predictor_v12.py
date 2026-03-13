@@ -123,7 +123,7 @@ class RaceSimulator:
 
         # Skill Buffs (Driver Talent independent of Car)
         ELITE_DRIVERS = ["VER", "NOR", "HAM", "LEC", "ALO", "RUS"]
-        ROOKIES = ["ANT", "BEA", "HAD", "BOR", "LIN", "COL"]  # High Variance
+        ROOKIES = ["BEA", "BOR", "LIN", "COL"]  # High Variance
 
         # --- PHYSICS SETUP ---
         driver_configs = {}
@@ -250,11 +250,11 @@ def main():
     console = Console()
     analyzer = TelemetryAnalyzer(args.year, args.gp, args.session)
     session = analyzer.load_data()
-    
+
     if not session:
         console.print(f"[red]Could not load {args.session} data for {args.gp} {args.year}[/red]")
         return
-    
+
     try:
         session.load()
     except Exception as e:
@@ -268,14 +268,14 @@ def main():
         if laps.empty:
             console.print(f"[red]No lap data available for {args.session}[/red]")
             return
-        
+
         # Find fastest lap per driver
         best_laps = laps.loc[laps.groupby("Driver")["LapTime"].idxmin()]
         best_laps = best_laps[["Driver", "LapTime"]].copy()
         best_laps = best_laps.rename(columns={"Driver": "Abbreviation"})
         best_laps = best_laps.sort_values("LapTime").reset_index(drop=True)
         best_laps["GridPosition"] = range(1, len(best_laps) + 1)  # Estimated grid from FP pace
-        
+
         grid_data = best_laps
         session_label = f"{args.session} (Preliminary)"
     else:
@@ -286,20 +286,20 @@ def main():
     win_counts = sim.run_simulation()
 
     sorted_wins = sorted(win_counts.items(), key=lambda x: x[1], reverse=True)
-    
+
     if sorted_wins:
         # Build results table
         table = Table(title=f"{args.gp} GP {args.year} - Race Prediction ({session_label})")
         table.add_column("Pos", style="cyan", justify="right")
         table.add_column("Driver", style="white")
         table.add_column("Win Probability", style="green", justify="right")
-        
+
         for i, (driver, wins) in enumerate(sorted_wins[:10], 1):
             prob = (wins / Config.MONTE_CARLO_RUNS) * 100
             table.add_row(str(i), driver, f"{prob:.1f}%")
-        
+
         console.print(table)
-        
+
         if args.session in ["FP1", "FP2", "FP3"]:
             console.print(f"\n[yellow]⚠ Based on {args.session} pace - predictions will improve after qualifying[/yellow]")
 
