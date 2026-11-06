@@ -7,7 +7,16 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import prediction, ghost_car, best_car, common
+from .routers import (
+    prediction,
+    ghost_car,
+    best_car,
+    common,
+    standings,
+    weekend,
+    calendar,
+    engineering,
+)
 
 app = FastAPI(
     title="Don's F1 Addiction API",
@@ -31,6 +40,12 @@ app.include_router(common.router, prefix="/api", tags=["Common"])
 app.include_router(prediction.router, prefix="/api/prediction", tags=["Prediction"])
 app.include_router(ghost_car.router, prefix="/api/ghost-car", tags=["Ghost Car"])
 app.include_router(best_car.router, prefix="/api/best-car", tags=["Best Car"])
+
+
+app.include_router(standings.router, prefix="/api/standings", tags=["Standings"])
+app.include_router(weekend.router, prefix="/api/weekend", tags=["Weekend"])
+app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
+app.include_router(engineering.router, prefix="/api/engineering", tags=["Engineering"])
 
 
 @app.get("/api/health")

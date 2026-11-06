@@ -1,186 +1,395 @@
-"""
-Prediction API routes.
-Wraps all predictor model versions (v1 through v12) and exposes them via REST.
-"""
+"""Model adapters, immutable forecasts, and post-race scoring."""
 
-import os
-import sys
 import importlib.util
+import inspect
+import hashlib
+import logging
+import threading
+from pathlib import Path
+from typing import Literal
+
 import numpy as np
 import pandas as pd
-import fastf1
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
-from pathlib import Path
+from pydantic import BaseModel, Field
+
+from ..services.data import ROOT, finished, iso, load_session, number, utc_now
+from ..services.empirical_model import artifacts, features, infer
+from ..services import prediction_store as store
+from .common import get_schedule
 
 router = APIRouter()
-
-PREDICTION_DIR = Path(__file__).parent.parent.parent / "formula1-prediction"
-CACHE_DIR = Path(__file__).parent.parent.parent / "f1_cache"
-CACHE_DIR.mkdir(exist_ok=True)
-fastf1.Cache.enable_cache(str(CACHE_DIR))
-
-# ---------------------------------------------------------------------------
-# Dynamically discover available predictor versions
-# ---------------------------------------------------------------------------
-
-def _discover_versions() -> dict:
-    """Scan formula1-prediction/ and return {label: filename} for each predictor."""
-    versions = {}
-    pred_dir = PREDICTION_DIR
-    if not pred_dir.exists():
-        return versions
-
-    for f in sorted(pred_dir.glob("f1_predictor*.py")):
-        name = f.stem  # e.g. "f1_predictor_v12"
-        if name == "f1_predictor":
-            versions["v1 (Original – Physics + ML)"] = f
-        else:
-            tag = name.replace("f1_predictor_", "")   # "v12"
-            versions[tag] = f
-    return versions
+PREDICTION_DIR = ROOT / "formula1-prediction"
+SIMULATION_LOCK = threading.Lock()
+CHANGES = {
+    1: "Original long-run regression, fuel assumptions and Monte Carlo framework",
+    2: "More simulations and revised stint detection and traffic penalties",
+    3: "Revised grid fallbacks and stint assumptions",
+    4: "Track-dependent overtaking constraints and race distance",
+    5: "Revised traffic and race simulation heuristics",
+    6: "Further safety-car and racecraft heuristics",
+    7: "Additional pace anomaly and driver adjustments",
+    8: "Revised driver and pace adjustments",
+    9: "Further anomaly handling and driver-tier assumptions",
+    10: "Qualifying-anchored pace, replacing the long-run physics dependency",
+    11: "Grid position and track-dependent traffic drag",
+    12: "22-car field and winning-margin simulation; hardcoded 2026 driver tiers",
+}
 
 
-def _load_module(path: Path):
-    """Import a predictor module by file path."""
-    spec = importlib.util.spec_from_file_location(path.stem, str(path))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+def _discover_versions():
+    paths = {1: PREDICTION_DIR / "f1_predictor.py"}
+    for path in PREDICTION_DIR.glob("f1_predictor_v*.py"):
+        tag = path.stem.removeprefix("f1_predictor_v")
+        if tag.isdigit():
+            paths[int(tag)] = path
+    return {f"v{v}": path for v, path in sorted(paths.items()) if path.exists()}
 
 
-# ---------------------------------------------------------------------------
-# API models
-# ---------------------------------------------------------------------------
+def _load_module(path):
+    spec = importlib.util.spec_from_file_location(path.stem, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-class PredictionRequest(BaseModel):
-    year: int = 2026
-    gp: str = "Great Britain"
-    session: str = "Q"
-    model: str = "v12"
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @router.get("/models")
 def list_models():
-    """Return available predictor model versions."""
-    versions = _discover_versions()
-    return {"models": list(versions.keys())}
+    models = [
+        {
+            "id": key,
+            "name": f"{key} · Legacy simulation",
+            "improvements": [CHANGES.get(int(key[1:]), "Legacy iteration")],
+            "limitations": [
+                "Heuristic assumptions; no demonstrated calibration or validated improvement over prior versions"
+            ],
+            "sessions": ["Q"] if key in ("v10", "v11") else ["FP1", "FP2", "FP3", "Q"],
+            "metrics": None,
+            "trainedThrough": None,
+        }
+        for key in _discover_versions()
+    ]
+    for artifact in artifacts():
+        models.append(
+            {
+                key: artifact.get(key)
+                for key in (
+                    "id",
+                    "name",
+                    "improvements",
+                    "limitations",
+                    "metrics",
+                    "trainedThrough",
+                    "trainingEvents",
+                    "baselines",
+                    "improvesGridLogLoss",
+                    "previousComparable",
+                    "heldoutEventKeys",
+                )
+            }
+        )
+        models[-1]["sessions"] = ["Q"]
+    return {
+        "models": [m["id"] for m in models],
+        "catalog": models,
+        "defaultModel": models[-1]["id"] if models else None,
+        "trainingCommand": "python -m backend.train_predictor --from-year 2023 --through-year 2025",
+    }
+
+
+class PredictionRequest(BaseModel):
+    year: int = Field(2026, ge=2018, le=2100)
+    gp: str = Field("Great Britain", min_length=1, max_length=100)
+    session: Literal["FP1", "FP2", "FP3", "Q"] = "Q"
+    model: str = Field("v12", max_length=100)
+    seed: int = Field(17, ge=0, le=2**32 - 1)
+
+
+def grid_data(session, kind):
+    if kind != "Q":
+        from ..services.data import clean_laps
+
+        laps = clean_laps(session.laps)
+        if laps.empty:
+            raise ValueError("No valid practice laps")
+        best = laps.loc[
+            laps.groupby("Driver")["LapTime"].idxmin(), ["Driver", "LapTime"]
+        ]
+        best = (
+            best.rename(columns={"Driver": "Abbreviation"})
+            .sort_values("LapTime")
+            .reset_index(drop=True)
+        )
+        best["GridPosition"] = np.arange(1, len(best) + 1)
+        return best
+    return session.results.sort_values("Position").copy()
+
+
+def normalize_counts(raw):
+    counts, margins = raw if isinstance(raw, tuple) else (raw, None)
+    total = float(sum(counts.values()))
+    if not counts or not np.isfinite(total) or total <= 0:
+        raise ValueError("Model returned no finite winner distribution")
+    if any(not np.isfinite(v) or v < 0 for v in counts.values()):
+        raise ValueError("Model returned invalid winner counts")
+    # v1 has a weight-only fallback: normalize actual output, never divide it by configured runs.
+    return {str(d): float(w) / total for d, w in counts.items()}, margins, total
+
+
+def legacy(req, session):
+    model = req.model.lower()
+    if model == "v1 (original – physics + ml)":
+        model = "v1"
+    paths = _discover_versions()
+    if model not in paths:
+        raise ValueError("Unknown model; select an exact ID from the catalog")
+    if model in ("v10", "v11") and req.session != "Q":
+        raise ValueError("This qualifying-only model cannot use a practice session")
+    module = _load_module(paths[model])
+    frame = grid_data(session, req.session)
+    grid = frame["Abbreviation"].dropna().tolist()
+    profile, warnings = {}, [
+        "Legacy simulation uses manually configured assumptions and may contain driver-specific bonuses. These are not empirical skill estimates."
+    ]
+    params = inspect.signature(module.RaceSimulator.__init__).parameters
+    # UI event names differ from legacy dictionary keys (e.g. British GP / Great Britain).
+    aliases = {
+        "British Grand Prix": "Great Britain",
+        "Australian Grand Prix": "Australia",
+        "Italian Grand Prix": "Italy",
+        "Japanese Grand Prix": "Japan",
+        "Belgian Grand Prix": "Belgium",
+        "Spanish Grand Prix": "Spain",
+        "Canadian Grand Prix": "Canada",
+        "Austrian Grand Prix": "Austria",
+        "Hungarian Grand Prix": "Hungary",
+        "Dutch Grand Prix": "Netherlands",
+        "Brazilian Grand Prix": "Brazil",
+        "São Paulo Grand Prix": "Brazil",
+        "Mexico City Grand Prix": "Mexico",
+        "United States Grand Prix": "United States",
+    }
+    gp_name = aliases.get(req.gp, req.gp.removesuffix(" Grand Prix"))
+    with SIMULATION_LOCK:
+        # Legacy modules use NumPy's global generator. Restore it after every request.
+        before = np.random.get_state()
+        try:
+            np.random.seed(req.seed)
+            if "physics_profile" in params:
+                practice = session if req.session != "Q" else None
+                if practice is None:
+                    for kind in ("FP3", "FP2", "FP1"):
+                        try:
+                            candidate = session.event.get_session(kind)
+                            if pd.Timestamp(candidate.date) < pd.Timestamp(
+                                session.date
+                            ):
+                                candidate = load_session(req.year, req.gp, kind)
+                                if finished(candidate):
+                                    practice = candidate
+                                    break
+                        except Exception:
+                            continue
+                if practice is not None:
+                    analyzer = module.TelemetryAnalyzer.__new__(
+                        module.TelemetryAnalyzer
+                    )
+                    profile = analyzer.analyze_stints(practice)
+                    # Original v1 keys profiles by driver number; simulation uses abbreviations.
+                    profile = {
+                        (
+                            str(practice.get_driver(k)["Abbreviation"])
+                            if str(k).isdigit()
+                            else str(k)
+                        ): v
+                        for k, v in profile.items()
+                    }
+                if not profile:
+                    warnings.append(
+                        "No usable pre-cutoff long runs: grid-based fallback, not a measured race-pace estimate"
+                    )
+                kwargs = {"gp_name": gp_name} if "gp_name" in params else {"laps": 58}
+                # Do not load the target race to discover laps (would leak future information).
+                if "laps" in kwargs:
+                    kwargs = {"laps": 58}
+                    warnings.append("Legacy v1–v3 race distance defaults to 58 laps")
+                sim = module.RaceSimulator(profile, grid, **kwargs)
+            else:
+                sim = module.RaceSimulator(frame, gp_name)
+            probs, margins, total = normalize_counts(sim.run_simulation())
+        finally:
+            np.random.set_state(before)
+    return probs, margins, total, warnings, model
 
 
 @router.post("/run")
 def run_prediction(req: PredictionRequest):
-    """
-    Run a race prediction using the selected model version.
-    Returns win-probability table for top drivers.
-    """
-    versions = _discover_versions()
-
-    # Find matching version key
-    matched_key = None
-    for key in versions:
-        if req.model.lower() in key.lower():
-            matched_key = key
-            break
-    if matched_key is None:
-        raise HTTPException(status_code=400, detail=f"Unknown model '{req.model}'. Available: {list(versions.keys())}")
-
-    mod = _load_module(versions[matched_key])
-
-    # --- Load session data ------------------------------------------------
     try:
-        cache_dir = str(CACHE_DIR)
-        os.makedirs(cache_dir, exist_ok=True)
-        fastf1.Cache.enable_cache(cache_dir)
-        session = fastf1.get_session(req.year, req.gp, req.session)
-        session.load()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load session data: {e}")
+        session = load_session(req.year, req.gp, req.session)
+        if not finished(session):
+            raise ValueError(
+                "Prediction input session has not finished; timing may still be provisional"
+            )
+        cutoff, trained_through, margins = iso(session.date), None, None
+        inputs = {"sessionStart": cutoff}
+        source_hash = None
+        if req.model.startswith("v13-"):
+            artifact = next((a for a in artifacts() if a["id"] == req.model), None)
+            if artifact is None:
+                raise ValueError(
+                    "Trained model not found; run the documented training command first"
+                )
+            if req.session != "Q":
+                raise ValueError("Empirical v13 is trained for qualifying inputs only")
+            session, entries, meta = features(req.year, req.gp)
+            if pd.Timestamp(artifact["trainedThrough"]) >= pd.Timestamp(meta["cutoff"]):
+                raise ValueError(
+                    "This model was trained on results after the selected feature cutoff. Select an earlier-trained iteration."
+                )
+            inputs = {**meta, "entries": entries}
+            source_hash = hashlib.sha256(
+                __import__("json").dumps(artifact, sort_keys=True).encode()
+            ).hexdigest()
+            probs = dict(
+                zip([e["driver"] for e in entries], infer(artifact, entries).tolist())
+            )
+            total, trained_through, model = (
+                0,
+                artifact["trainedThrough"],
+                artifact["id"],
+            )
+            warnings = artifact["limitations"]
+        else:
+            probs, margins, total, warnings, model = legacy(req, session)
+            source_hash = hashlib.sha256(
+                _discover_versions()[model].read_bytes()
+            ).hexdigest()
+        created = utc_now()
+        race_start = iso(session.event.get("Session5DateUtc"))
+        # Get race date by name: sprint weekends need not use a fixed session slot.
+        for index in range(1, 6):
+            if session.event.get(f"Session{index}") == "Race":
+                race_start = iso(session.event.get(f"Session{index}DateUtc"))
+        mode = (
+            "pre-race"
+            if race_start and pd.Timestamp(created) < pd.Timestamp(race_start)
+            else "retrospective"
+        )
+        order = sorted(probs, key=probs.get, reverse=True)
+        return store.save(
+            {
+                "year": req.year,
+                "gp": str(session.event["EventName"]),
+                "round": int(session.event["RoundNumber"]),
+                "session": req.session,
+                "sessionLabel": (
+                    "Qualifying"
+                    if req.session == "Q"
+                    else f"{req.session} · provisional grid"
+                ),
+                "model": model,
+                "seed": req.seed,
+                "monteCarloRuns": int(total),
+                "createdAt": created,
+                "featureCutoff": cutoff,
+                "trainedThrough": trained_through,
+                "mode": mode,
+                "warnings": warnings,
+                "probabilities": probs,
+                "modelSourceHash": source_hash,
+                "inputs": inputs,
+                "winningMargins": (
+                    {
+                        k: number(v / sum(margins.values()) * 100)
+                        for k, v in margins.items()
+                    }
+                    if margins
+                    else None
+                ),
+                "predictions": [
+                    {
+                        "position": i + 1,
+                        "driver": d,
+                        "winProbability": number(probs[d] * 100, 3),
+                    }
+                    for i, d in enumerate(order)
+                ],
+            }
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except Exception as exc:
+        logging.exception("Prediction execution failed")
+        raise HTTPException(
+            502,
+            "Prediction failed while loading data or running the model. Check the backend log.",
+        ) from exc
 
-    # --- Determine grid_data depending on session type --------------------
-    if req.session in ("FP1", "FP2", "FP3"):
-        laps = session.laps
-        if laps.empty:
-            raise HTTPException(status_code=404, detail="No lap data for this session")
-        best_laps = laps.loc[laps.groupby("Driver")["LapTime"].idxmin()]
-        best_laps = best_laps[["Driver", "LapTime"]].copy()
-        best_laps = best_laps.rename(columns={"Driver": "Abbreviation"})
-        best_laps = best_laps.sort_values("LapTime").reset_index(drop=True)
-        best_laps["GridPosition"] = range(1, len(best_laps) + 1)
-        grid_data = best_laps
-        session_label = f"{req.session} (Preliminary)"
-    else:
-        grid_data = session.results
-        session_label = "Qualifying"
 
-    # --- Run simulation ---------------------------------------------------
-    SimClass = getattr(mod, "RaceSimulator", None)
-    ConfigClass = getattr(mod, "Config", None)
-    if SimClass is None or ConfigClass is None:
-        raise HTTPException(status_code=500, detail="Predictor module missing RaceSimulator or Config")
-
-    monte_carlo_runs = getattr(ConfigClass, "MONTE_CARLO_RUNS", 5000)
-
-    # Different constructor signatures across versions
-    import inspect
-    sig = inspect.signature(SimClass.__init__)
-    params = list(sig.parameters.keys())
-
-    if "grid_data" in params and "gp_name" in params:
-        sim = SimClass(grid_data, req.gp)
-    elif "physics_profile" in params:
-        # v1 original needs physics + grid
-        grid = grid_data["Abbreviation"].head(20).tolist() if "Abbreviation" in grid_data.columns else []
-        sim = SimClass({}, grid)
-    else:
-        sim = SimClass(grid_data, req.gp)
-
-    win_counts = sim.run_simulation()
-
-    sorted_wins = sorted(win_counts.items(), key=lambda x: x[1], reverse=True)
-    predictions = []
-    for i, (driver, wins) in enumerate(sorted_wins, 1):
-        prob = (wins / monte_carlo_runs) * 100
-        if prob > 0:
-            predictions.append({
-                "position": i,
-                "driver": driver,
-                "winProbability": round(prob, 1),
-            })
-
+@router.get("/history")
+def history():
     return {
-        "year": req.year,
-        "gp": req.gp,
-        "session": req.session,
-        "sessionLabel": session_label,
-        "model": matched_key,
-        "monteCarloRuns": monte_carlo_runs,
-        "predictions": predictions,
+        "runs": [
+            {
+                k: r.get(k)
+                for k in ("runId", "year", "gp", "round", "model", "mode", "createdAt")
+            }
+            for r in store.recent()
+        ]
     }
+
+
+@router.get("/evaluate/{run_id}")
+def evaluate(run_id: str):
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(404, "Prediction snapshot not found")
+    try:
+        race = load_session(run["year"], run["round"], "R")
+        if not finished(race):
+            return {
+                "status": "pending",
+                "detail": "Race not finished or results not published yet",
+            }
+        results = race.results.dropna(subset=["Position"]).sort_values("Position")
+        if results.empty or float(results.iloc[0]["Position"]) != 1:
+            return {"status": "pending", "detail": "Winner classification unavailable"}
+        winner = str(results.iloc[0]["Abbreviation"])
+        drivers = set(run["probabilities"]) | set(results["Abbreviation"].astype(str))
+        p = run["probabilities"]
+        brier = sum((p.get(d, 0) - int(d == winner)) ** 2 for d in drivers)
+        leader = max(p, key=p.get)
+        return {
+            "status": "scored",
+            "mode": run["mode"],
+            "winner": winner,
+            "predictedWinner": leader,
+            "winnerProbability": number(p.get(winner, 0) * 100),
+            "correct": leader == winner,
+            "brier": number(brier),
+            "logLoss": number(-np.log(max(p.get(winner, 0), 1e-15))),
+            "asOf": utc_now(),
+            "note": "Winner-distribution score, not finishing-order accuracy. Lower Brier/log loss is better. Results may change after penalties.",
+            "results": [
+                {
+                    "position": int(r["Position"]),
+                    "driver": str(r["Abbreviation"]),
+                    "predictedProbability": number(
+                        p.get(str(r["Abbreviation"]), 0) * 100
+                    ),
+                }
+                for _, r in results.iterrows()
+            ],
+        }
+    except Exception:
+        return {
+            "status": "pending",
+            "detail": "Race results not available from provider; retry later",
+        }
 
 
 @router.get("/grand-prix/{year}")
 def list_grand_prix(year: int):
-    """Return list of Grand Prix events for a year (non-testing)."""
-    try:
-        schedule = fastf1.get_event_schedule(year)
-        events = []
-        for _, row in schedule.iterrows():
-            fmt = str(row.get("EventFormat", "")).lower()
-            if fmt == "testing":
-                continue
-            if pd.isna(row.get("RoundNumber")) or row.get("RoundNumber") == 0:
-                continue
-            events.append({
-                "roundNumber": int(row["RoundNumber"]),
-                "eventName": str(row.get("EventName", "")),
-                "country": str(row.get("Country", "")),
-                "date": str(row.get("EventDate", ""))[:10],
-            })
-        return {"year": year, "events": events}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    result = get_schedule(year)
+    result["events"] = [e for e in result["events"] if not e["isTesting"]]
+    return result

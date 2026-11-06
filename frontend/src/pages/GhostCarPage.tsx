@@ -1,234 +1,228 @@
-import { useState, useEffect, useMemo } from 'react'
-import {
-  fetchSchedule,
-  fetchSessions,
-  fetchDrivers,
-  fetchComparison,
-  type EventInfo,
-  type SessionInfo,
-  type DriverInfo,
-  type ComparisonResponse,
-} from '../api'
-import Spinner from '../components/Spinner'
-import TrackMap from '../components/TrackMap'
-import TelemetryChart from '../components/TelemetryChart'
-import type { LapData } from '../api'
+import { useEffect, useMemo, useState } from "react";
+import type {
+  ComparisonResponse,
+  EventInfo,
+  SessionInfo,
+  DriverInfo,
+} from "../api";
+import { useApi } from "../hooks/useApi";
+import SeasonSelect from "../components/SeasonSelect";
+import DataState from "../components/DataState";
+import LapReplay from "../components/LapReplay";
+import TelemetryChart from "../components/TelemetryChart";
 
-function driverName(d: LapData): string {
-  return d.abbreviation ?? d.driver ?? '???'
+export function ComparisonView({ data }: { data: ComparisonResponse }) {
+  const first = data.driver1.abbreviation ?? data.driver1.driver ?? "A",
+    second = data.driver2.abbreviation ?? data.driver2.driver ?? "B";
+  const chart = useMemo(
+    () =>
+      data.comparison.distance.map((distance, i) => ({
+        distance: Math.round(distance),
+        speedA: data.comparison.speed1[i],
+        speedB: data.comparison.speed2[i],
+        speedDelta: data.comparison.speedDelta[i],
+        timeDelta: data.comparison.timeDelta[i],
+        throttleA: data.comparison.throttle1[i],
+        throttleB: data.comparison.throttle2[i],
+        brakeA: data.comparison.brake1[i],
+        brakeB: data.comparison.brake2[i],
+        gearA: data.comparison.gear1[i],
+        gearB: data.comparison.gear2[i],
+        drsA: data.comparison.drs1[i],
+        drsB: data.comparison.drs2[i],
+      })),
+    [data],
+  );
+  return (
+    <>
+      <div className="stats-grid">
+        <div>
+          <small>
+            {first} · {data.driver1.compound}
+          </small>
+          <strong>{data.driver1.lapTime}</strong>
+        </div>
+        <div>
+          <small>
+            {second} · {data.driver2.compound}
+          </small>
+          <strong>{data.driver2.lapTime}</strong>
+        </div>
+        <div>
+          <small>
+            LAP GAP {first} − {second}
+          </small>
+          <strong>
+            {(
+              data.driver1.lapTimeSeconds - data.driver2.lapTimeSeconds
+            ).toFixed(3)}{" "}
+            s
+          </strong>
+        </div>
+      </div>
+      <LapReplay first={data.driver1} second={data.driver2} />
+      <p className="notice">
+        A = {first}, B = {second}. Charts align by distance in metres. Brake is
+        an on/off signal. DRS is the raw provider code; 2026 aero channels need
+        separate interpretation.
+      </p>
+      <div className="telemetry-section">
+        <TelemetryChart
+          title="Speed (km/h)"
+          data={chart}
+          dataKey1="speedA"
+          dataKey2="speedB"
+        />
+        <TelemetryChart
+          title={`Cumulative time A − B (s) · positive = A behind`}
+          data={chart}
+          dataKey1="timeDelta"
+          isArea
+        />
+        <TelemetryChart
+          title="Throttle (%)"
+          data={chart}
+          dataKey1="throttleA"
+          dataKey2="throttleB"
+        />
+        <TelemetryChart
+          title="Brake applied (0 / 1)"
+          data={chart}
+          dataKey1="brakeA"
+          dataKey2="brakeB"
+        />
+        <TelemetryChart
+          title="Gear"
+          data={chart}
+          dataKey1="gearA"
+          dataKey2="gearB"
+        />
+        <TelemetryChart
+          title="DRS provider code"
+          data={chart}
+          dataKey1="drsA"
+          dataKey2="drsB"
+        />
+      </div>
+    </>
+  );
 }
-
 export default function GhostCarPage() {
-  const [year, setYear] = useState(2025)
-  const [events, setEvents] = useState<EventInfo[]>([])
-  const [round, setRound] = useState<number | null>(null)
-  const [sessions, setSessions] = useState<SessionInfo[]>([])
-  const [sessionKey, setSessionKey] = useState('')
-  const [drivers, setDrivers] = useState<DriverInfo[]>([])
-  const [driver1, setDriver1] = useState('')
-  const [driver2, setDriver2] = useState('')
-
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [data, setData] = useState<ComparisonResponse | null>(null)
-
-  // Fetch schedule
+  const [year, setYear] = useState(new Date().getFullYear()),
+    [round, setRound] = useState(""),
+    [session, setSession] = useState("Q");
+  const [first, setFirst] = useState(""),
+    [second, setSecond] = useState(""),
+    [path, setPath] = useState<string | null>(null);
+  const schedule = useApi<{ events: EventInfo[] }>(`/schedule/${year}`);
+  const sessions = useApi<{ sessions: SessionInfo[] }>(
+    round ? `/sessions/${year}/${round}` : null,
+  );
+  const drivers = useApi<{ drivers: DriverInfo[] }>(
+    round && session && sessions.data?.sessions.some((s) => s.key === session)
+      ? `/drivers/${year}/${round}/${session}`
+      : null,
+  );
+  const comparison = useApi<ComparisonResponse>(path);
   useEffect(() => {
-    fetchSchedule(year).then((r) => {
-      const races = r.events.filter((e) => !e.isTesting)
-      setEvents(races)
-      if (races.length) setRound(races[0].roundNumber)
-    }).catch(() => {})
-  }, [year])
-
-  // Fetch sessions when round changes
+    const races = schedule.data?.events.filter((e) => !e.isTesting) ?? [];
+    setRound(
+      String(
+        (
+          races
+            .filter((e) => new Date(e.date).getTime() <= Date.now())
+            .at(-1) ?? races[0]
+        )?.roundNumber ?? "",
+      ),
+    );
+  }, [schedule.data]);
   useEffect(() => {
-    if (round == null) return
-    fetchSessions(year, round).then((r) => {
-      setSessions(r.sessions)
-      if (r.sessions.length) setSessionKey(r.sessions[0].key)
-    }).catch(() => {})
-  }, [year, round])
-
-  // Fetch drivers when session changes
+    const list = sessions.data?.sessions ?? [];
+    if (list.length && !list.some((s) => s.key === session))
+      setSession(list[0].key);
+  }, [sessions.data, session]);
   useEffect(() => {
-    if (round == null || !sessionKey) return
-    fetchDrivers(year, round, sessionKey).then((r) => {
-      setDrivers(r.drivers)
-      if (r.drivers.length >= 2) {
-        setDriver1(r.drivers[0].abbreviation)
-        setDriver2(r.drivers[1].abbreviation)
-      }
-    }).catch(() => {})
-  }, [year, round, sessionKey])
-
-  const handleCompare = async () => {
-    if (round == null || !sessionKey || !driver1 || !driver2) return
-    setLoading(true)
-    setError('')
-    setData(null)
-    try {
-      const res = await fetchComparison(year, round, sessionKey, driver1, driver2)
-      setData(res)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Comparison failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Sample distance points for charts (take every 5th point for perf)
-  const chartData = useMemo(() => {
-    if (!data) return null
-    const c = data.comparison
-    const step = 5
-    const rows = []
-    for (let i = 0; i < c.distance.length; i += step) {
-      rows.push({
-        distance: Math.round(c.distance[i]),
-        [driverName(data.driver1)]: Math.round(c.speed1[i]),
-        [driverName(data.driver2)]: Math.round(c.speed2[i]),
-        delta: c.speedDelta[i],
-      })
-    }
-    return rows
-  }, [data])
-
-  const gapStr = data
-    ? (data.driver1.lapTimeSeconds - data.driver2.lapTimeSeconds).toFixed(3)
-    : null
-
+    setFirst(drivers.data?.drivers[0]?.abbreviation ?? "");
+    setSecond(drivers.data?.drivers[1]?.abbreviation ?? "");
+  }, [drivers.data]);
+  useEffect(() => setPath(null), [year, round, session, first, second]);
   return (
     <>
       <div className="page__header">
-        <h1 className="page__title">Ghost Car Comparison</h1>
+        <h1 className="page__title">Ghost Car</h1>
         <p className="page__subtitle">
-          Compare two drivers' fastest laps — telemetry overlay on the track map with speed, throttle, and brake traces.
+          Recorded fastest-lap replay and distance-aligned telemetry. Selecting
+          a race still compares fastest laps, not the full race.
         </p>
       </div>
-
-      {/* ── Controls ──────────────────────────────────────────── */}
-      <div className="control-panel">
-        <div className="control-panel__row">
-          <div className="form-group">
-            <label>Season</label>
-            <select className="form-select" value={year} onChange={(e) => setYear(+e.target.value)}>
-              {Array.from({ length: 9 }, (_, i) => 2018 + i).map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Grand Prix</label>
-            <select className="form-select" value={round ?? ''} onChange={(e) => setRound(+e.target.value)}>
-              {events.map((ev) => (
-                <option key={ev.roundNumber} value={ev.roundNumber}>{ev.eventName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Session</label>
-            <select className="form-select" value={sessionKey} onChange={(e) => setSessionKey(e.target.value)}>
-              {sessions.map((s) => (
-                <option key={s.key} value={s.key}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Driver 1</label>
-            <select className="form-select" value={driver1} onChange={(e) => setDriver1(e.target.value)}>
-              {drivers.map((d) => (
-                <option key={d.abbreviation} value={d.abbreviation}>
-                  {d.abbreviation} — {d.team}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Driver 2</label>
-            <select className="form-select" value={driver2} onChange={(e) => setDriver2(e.target.value)}>
-              {drivers.map((d) => (
-                <option key={d.abbreviation} value={d.abbreviation}>
-                  {d.abbreviation} — {d.team}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button className="btn btn--primary" onClick={handleCompare} disabled={loading || driver1 === driver2}>
-            {loading ? 'Loading…' : 'Compare'}
-          </button>
-        </div>
+      <div className="control-panel control-panel__row">
+        <SeasonSelect
+          value={year}
+          onChange={(y) => {
+            setRound("");
+            setYear(y);
+          }}
+        />
+        <select
+          aria-label="Grand Prix"
+          className="form-select"
+          value={round}
+          onChange={(e) => setRound(e.target.value)}
+        >
+          {schedule.data?.events
+            .filter((e) => !e.isTesting)
+            .map((e) => (
+              <option key={e.roundNumber} value={e.roundNumber}>
+                {e.eventName}
+              </option>
+            ))}
+        </select>
+        <select
+          aria-label="Session"
+          className="form-select"
+          value={session}
+          onChange={(e) => setSession(e.target.value)}
+        >
+          {sessions.data?.sessions.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        {[
+          { value: first, set: setFirst, label: "Driver A" },
+          { value: second, set: setSecond, label: "Driver B" },
+        ].map((control) => (
+          <select
+            key={control.label}
+            aria-label={control.label}
+            className="form-select"
+            value={control.value}
+            onChange={(e) => control.set(e.target.value)}
+          >
+            {drivers.data?.drivers.map((d) => (
+              <option key={d.abbreviation} value={d.abbreviation}>
+                {d.abbreviation} · {d.team}
+              </option>
+            ))}
+          </select>
+        ))}
+        <button
+          className="btn btn--primary"
+          disabled={!first || !second || first === second || comparison.loading}
+          onClick={() =>
+            setPath(
+              `/ghost-car/compare/${year}/${round}/${session}/${first}/${second}`,
+            )
+          }
+        >
+          Compare
+        </button>
       </div>
-
-      {loading && <Spinner text="Loading telemetry data…" />}
-      {error && <p style={{ color: 'var(--f1-red)', marginBottom: '1rem' }}>⚠ {error}</p>}
-
-      {data && (
-        <>
-          {/* ── Lap Summary ──────────────────────────────────── */}
-          <div className="grid-2 mb-3">
-            <DriverCard driver={data.driver1} />
-            <DriverCard driver={data.driver2} />
-          </div>
-
-          {gapStr && (
-            <p className="text-center mb-3" style={{ fontSize: '1.2rem' }}>
-              Gap: <span className="font-black text-red">{Number(gapStr) > 0 ? '+' : ''}{gapStr}s</span>
-            </p>
-          )}
-
-          {/* ── Track Map ────────────────────────────────────── */}
-          <TrackMap
-            x1={data.driver1.telemetry.x}
-            y1={data.driver1.telemetry.y}
-            x2={data.driver2.telemetry.x}
-            y2={data.driver2.telemetry.y}
-            label1={driverName(data.driver1)}
-            label2={driverName(data.driver2)}
-          />
-
-          {/* ── Telemetry Charts ──────────────────────────────── */}
-          {chartData && (
-            <div className="telemetry-section">
-              <TelemetryChart
-                title="Speed (km/h)"
-                data={chartData}
-                dataKey1={driverName(data.driver1)}
-                dataKey2={driverName(data.driver2)}
-                color1="var(--f1-red)"
-                color2="var(--team-mercedes)"
-              />
-              <TelemetryChart
-                title="Speed Delta"
-                data={chartData}
-                dataKey1="delta"
-                color1="var(--f1-red)"
-                isArea
-              />
-            </div>
-          )}
-        </>
-      )}
+      {[schedule, sessions, drivers, comparison].map((state, i) => (
+        <DataState key={i} loading={state.loading} error={state.error} />
+      ))}
+      {comparison.data && <ComparisonView data={comparison.data} />}
     </>
-  )
-}
-
-function DriverCard({ driver }: { driver: ComparisonResponse['driver1'] }) {
-  return (
-    <div className="card">
-      <div className="card__accent" />
-      <div className="card__body">
-        <h3 className="card__title">{driverName(driver)}</h3>
-        <p className="card__text">
-          {driver.team} &middot; {driver.compound} &middot;{' '}
-          <span className="font-bold" style={{ color: 'var(--f1-white)' }}>{driver.lapTime}</span>
-        </p>
-      </div>
-    </div>
-  )
+  );
 }
