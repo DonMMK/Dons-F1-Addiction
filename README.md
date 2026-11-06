@@ -1,194 +1,132 @@
-# 🏎️ Don's F1 Addiction
+# Don's F1 Addiction
 
-A full-stack Formula 1 data analysis platform built with **React** + **FastAPI** + **FastF1**.
+A React / TypeScript frontend and FastAPI backend for championship context,
+empirical weekend comparisons, recorded lap replay and auditable race predictions.
 
-Analyse telemetry, predict race outcomes, and discover what makes the fastest cars tick — all from a sleek, F1-themed web interface.
+## Pages
 
----
+| Route | What it does |
+| --- | --- |
+| `/` | Driver / constructor standings, previous-round movement, animated schematic championship order, F1 calendar and next session in the viewer's timezone |
+| `/weekend` | Same-segment qualifying and matched-lap teammate race comparisons, sample counts, exploratory intervals and tyre-age trends |
+| `/prediction` | Version descriptions, saved winner distributions, post-race Brier / log-loss scores and trained-iteration validation metrics |
+| `/ghost-car` | Two recorded fastest laps with play / pause / scrub controls and speed, throttle, brake, gear, DRS and cumulative time traces |
+| `/looking-back` | Cited W11 / RB19 / MCL39 engineering context, conceptual car diagrams, signed qualifying advantage and recorded lap comparisons |
+| `/not-just-f1` | Mixed-series calendar: F1, WEC / Hypercar, IMSA, all ten 2026 NLS races, GT Europe and Supercars; browser-local calendar imports |
+| `/best-car` | Redirect to `/looking-back` for existing bookmarks |
 
-## 📦 Features
+See [the refactor notes](docs/F1_REFACTOR.md) for the original findings, methodology,
+limits, source provenance, model workflow and verification details.
 
-### 1. Race Prediction 📊
-Monte Carlo simulation engine with **12 model versions** — select the model, season, Grand Prix, and session to generate win-probability predictions.
+## Install and run
 
-### 2. Ghost Car Comparison 👻
-Compare two drivers' fastest laps head-to-head. Interactive track map with full telemetry overlay (speed, throttle, brake, DRS).
-
-### 3. Best Car Analysis 🏆
-Which car dominated each era? Compare the **Mercedes W11**, **Red Bull RB19**, and **McLaren MCL39** with qualifying gaps and season progression charts.
-
----
-
-## 🏗️ Architecture
-
-```
-Dons-F1-Addiction/
-├── frontend/                     # React + Vite + TypeScript
-│   ├── src/
-│   │   ├── components/           # Layout, TrackMap, TelemetryChart, Spinner
-│   │   ├── pages/                # HomePage, PredictionPage, GhostCarPage, BestCarPage
-│   │   ├── styles/               # F1-themed global CSS
-│   │   ├── api.ts                # Typed API client
-│   │   └── App.tsx               # Router
-│   ├── package.json
-│   └── vite.config.ts            # Proxy /api → backend
-│
-├── backend/                      # FastAPI REST API
-│   ├── app.py                    # Application entry point
-│   ├── routers/
-│   │   ├── common.py             # Seasons, schedules, drivers
-│   │   ├── prediction.py         # Prediction model runner
-│   │   ├── ghost_car.py          # Telemetry & comparison
-│   │   └── best_car.py           # Era analysis & gaps
-│   └── requirements.txt
-│
-├── formula1-prediction/          # Original predictor models (v1-v12)
-├── formula1-ghost-car/           # Original ghost car CLI & data loader
-├── formula1-best-car/            # Original best car analysis
-└── README.md
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Python 3.10+**
-- **Node.js 18+** and npm
-- pip
-
-### 1. Clone & setup Python environment
+Python 3.10+ and Node.js 18+ are required. Activate your existing Python virtual
+environment first. Run these commands from the repository root:
 
 ```bash
-git clone https://github.com/DonMMK/Dons-F1-Addiction.git
-cd Dons-F1-Addiction
-
-python3 -m venv f1-venv
-source f1-venv/bin/activate   # macOS/Linux
-pip install -r backend/requirements.txt
+python -m pip install -r backend/requirements.txt
+npm --prefix frontend install
+npm --prefix frontend run build
+python -m uvicorn backend.app:app --reload --port 8000
 ```
 
-### 2. Start the backend
+In another terminal:
 
 ```bash
-source f1-venv/bin/activate
-uvicorn backend.app:app --reload --port 8000
+npm --prefix frontend run dev
 ```
 
-The API is now live at `http://localhost:8000`. Explore docs at `http://localhost:8000/docs`.
+Open `http://localhost:5173`. API documentation is at `http://localhost:8000/docs`.
+The Vite development proxy forwards `/api` to the backend. A production host must
+serve the React assets and forward `/api` to FastAPI; `vite preview` alone does not
+provide this backend proxy.
 
-### 3. Start the frontend
+No F1TV account is needed for historical analysis from 2023 onwards. The backend
+uses existing FastF1 caches and free OpenF1 historical timing, with Jolpica for
+published classifications. See [Backend data loading](docs/F1_DATA_LOADING.md)
+for setup, diagnostics, coverage and optional archive access.
+
+The uploaded code export excluded lockfiles, so this patch deliberately leaves
+your existing `frontend/package-lock.json` untouched. `npm install` updates it;
+commit the resulting lockfile in your repository after reviewing it.
+
+## Runtime data
+
+`var/` holds SQLite prediction history and JSON model iterations. The backend
+reuses populated legacy FastF1 caches when available, otherwise `var/fastf1`.
+Set `F1_CACHE_DIR` to select the cache explicitly. Set `F1_DATA_DIR` to a persistent absolute path when deploying. Keep
+this directory out of version control (add `/var/` to your repository's existing
+`.gitignore`). Existing CLI tools and their caches are retained; the web backend
+shares the selected cache. OpenF1 responses and its shared rate budget are stored
+in `var/openf1/openf1.sqlite3`. First uncached loads need network access and can
+take time; subsequent requests reuse the cache. Set `F1_TIMING_PROVIDER=openf1`
+to force the free provider, or `fastf1` for optional native archive access.
+The default `auto` prefers existing timing caches, then OpenF1.
+
+Season analyses run in a bounded background queue and report their progress. Run
+one Uvicorn worker with this in-process job queue; multiple independent workers
+need a shared job store / queue before deployment. Forecast snapshots are durable
+SQLite records, independently of those transient analysis jobs.
+
+## Verify
 
 ```bash
-cd frontend
-npm install
-npm run dev
+python -m unittest discover -s backend/tests -v
+npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
-Open `http://localhost:5173` in your browser. The Vite dev server proxies `/api` requests to the backend.
+Frontend interaction tests use DOM fixtures, not live data or a rendered browser.
+The offline backend suite exercises model adapters, forecast persistence / scoring,
+chronological training, lap matching and timezone conversion.
 
----
+## Create an empirical model iteration
 
-## 🎮 Usage
-
-| Page | URL | Description |
-|------|-----|-------------|
-| **Home** | `/` | Overview of available tools |
-| **Prediction** | `/prediction` | Select model, GP, session → run Monte Carlo simulation |
-| **Ghost Car** | `/ghost-car` | Select two drivers → see track map + telemetry comparison |
-| **Best Car** | `/best-car` | Pick an era → season progression + qualifying gap analysis |
-
-### Prediction Models
-
-All predictor versions (v1 through v12) are available in the dropdown. Each version uses a different simulation approach:
-
-| Model | Approach |
-|-------|----------|
-| v1 | Physics + ML (fuel correction, tyre deg, Linear Regression) |
-| v2–v3 | Increased Monte Carlo runs, better stint detection |
-| v4–v6 | Track-specific overtake difficulty, safety car probability |
-| v7–v9 | Anomaly detection, driver tier buffs |
-| v10–v11 | Simplified qualifying-anchor simulation |
-| **v12** | 2026-ready: 22-driver grid, new teams (Cadillac), driver tiers |
-
----
-
-## 🛠️ Technologies
-
-| Layer | Stack |
-|-------|-------|
-| **Frontend** | React 18, TypeScript, Vite, Recharts, React Router |
-| **Backend** | FastAPI, Uvicorn, Pydantic |
-| **Data** | FastF1, Pandas, NumPy, scikit-learn |
-| **Styling** | Custom CSS (F1.com-inspired dark theme, Titillium Web) |
-
----
-
-## 📝 Original CLI Tools
-
-The original CLI tools still work independently:
+Legacy v1–v12 remain available with explicit limitations. They are not relabelled
+as empirically validated models. v13 uses learned numeric features without driver
+names, team names or personal tier assignments.
 
 ```bash
-# Ghost Car (interactive CLI)
-cd formula1-ghost-car && python main.py
-
-# Prediction (CLI)
-cd formula1-prediction && python f1_predictor_v12.py --year 2026 --gp "Australia" --session Q
-
-# Best Car Analysis
-cd formula1-best-car && python main.py
+python -m backend.train_predictor --from-year 2023 --through-year 2025
 ```
 
----
+After a later race, create a new immutable iteration, for example:
 
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-- [FastF1](https://github.com/theOehrly/Fast-F1) for F1 telemetry data
-- Formula 1 for the incredible sport that fuels this addiction
-
----
-
-## AI-Driven Development
-
-Use the command below to generate the code files to do some development
-
+```bash
+python -m backend.train_predictor --from-year 2023 --through-year 2026 --through-round 10
 ```
-find . \
-  -type f \
-  ! -path '*/node_modules/*' \
-  ! -path '*/.git/*' \
-  ! -path '*/f1-venv/*' \
-  ! -path '*/f1_cache/*' \
-  ! -path '*/cache/*' \
-  ! -path '*/__pycache__/*' \
-  ! -path '*/dist/*' \
-  ! -name 'f1-addiction-llm.txt' \
-  ! -name 'package-lock.json' \
-  \( \
-    -name '*.py' \
-    -o -name '*.ts' \
-    -o -name '*.tsx' \
-    -o -name '*.js' \
-    -o -name '*.jsx' \
-    -o -name '*.json' \
-    -o -name '*.html' \
-    -o -name '*.css' \
-    -o -name '*.md' \
-    -o -name '*.txt' \
-  \) \
-  -print0 |
-while IFS= read -r -d '' file; do
-  echo "============================================================"
-  echo "FILE: $file"
-  echo "============================================================"
-  cat "$file"
-  echo
-  echo
-done > f1-addiction-llm.txt
+
+Use the last round with completed, published results. Reload the Predictor page
+to see the new iteration. Training downloads historical sessions and needs at
+least 15 complete events. No trained v13 weights or claimed accuracy are bundled.
+Models trained after a selected weekend cannot forecast that weekend through the
+API. Older eligible iterations remain selectable.
+
+## Other motorsport calendars
+
+F1 sessions refresh from FastF1. Other series ship with a source-labelled 2026
+calendar snapshot checked on 7 November 2026. These are mostly event dates, not
+complete timed session schedules. Two published Monza WEC session starts are
+included. Exact timed entries are converted using the viewer's timezone and its
+DST rules. Date-only weekends remain venue dates.
+
+On “Not Just F1”, import a downloaded publisher `.ics` file to replace the selected
+series / year in your browser. Your imported data stays in that browser. For a
+shared repository snapshot:
+
+```bash
+python -m backend.services.ical path/to/publisher-calendar.ics \
+  --series imsa --year 2027 --source-url https://www.imsa.com/schedule
 ```
+
+Inspect and commit `data/motorsport-2027.json`. Imports require UTC or an explicit
+timezone, reject unexpanded recurring entries, omit cancelled entries and replace
+the chosen series / year so removed sessions do not survive a refresh. There is
+no automatic HTML scraping or invented session time for unsupported providers.
+
+## Original standalone tools
+
+The `formula1-prediction`, `formula1-ghost-car` and `formula1-best-car` tools remain.
+Install their own requirements to use their desktop / CLI export functionality.
+The website replays fastest laps; the standalone full-race replay is not exposed
+as a web feature in this patch.
