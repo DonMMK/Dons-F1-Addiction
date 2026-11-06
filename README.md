@@ -151,3 +151,44 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 - [FastF1](https://github.com/theOehrly/Fast-F1) for F1 telemetry data
 - Formula 1 for the incredible sport that fuels this addiction
+
+---
+
+## AI-Driven Development
+
+Use the command below to generate the code files to do some development
+
+```
+find . \
+  -type f \
+  ! -path '*/node_modules/*' \
+  ! -path '*/.git/*' \
+  ! -path '*/f1-venv/*' \
+  ! -path '*/f1_cache/*' \
+  ! -path '*/cache/*' \
+  ! -path '*/__pycache__/*' \
+  ! -path '*/dist/*' \
+  ! -name 'f1-addiction-llm.txt' \
+  ! -name 'package-lock.json' \
+  \( \
+    -name '*.py' \
+    -o -name '*.ts' \
+    -o -name '*.tsx' \
+    -o -name '*.js' \
+    -o -name '*.jsx' \
+    -o -name '*.json' \
+    -o -name '*.html' \
+    -o -name '*.css' \
+    -o -name '*.md' \
+    -o -name '*.txt' \
+  \) \
+  -print0 |
+while IFS= read -r -d '' file; do
+  echo "============================================================"
+  echo "FILE: $file"
+  echo "============================================================"
+  cat "$file"
+  echo
+  echo
+done > f1-addiction-llm.txt
+```
