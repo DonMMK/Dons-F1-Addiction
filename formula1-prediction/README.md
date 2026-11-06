@@ -78,3 +78,11 @@ python f1_predictor_v12.py --year 2026 --gp "Australia" --session Q
 ```bash
 python -c "import fastf1; print(fastf1.get_event_schedule(2025)[['RoundNumber', 'Country', 'EventName']].to_string())"
 ```
+
+# Terminal 1 — Backend
+source f1-venv/bin/activate
+uvicorn backend.app:app --reload --port 8000
+
+# Terminal 2 — Frontend
+cd frontend
+npm run dev

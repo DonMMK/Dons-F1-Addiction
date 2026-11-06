@@ -1,172 +1,153 @@
 # 🏎️ Don's F1 Addiction
 
-A collection of Formula 1 data analysis tools built with Python and the FastF1 library. Analyze telemetry, predict race outcomes, and discover what makes the fastest cars tick.
+A full-stack Formula 1 data analysis platform built with **React** + **FastAPI** + **FastF1**.
+
+Analyse telemetry, predict race outcomes, and discover what makes the fastest cars tick — all from a sleek, F1-themed web interface.
+
+---
 
 ## 📦 Features
 
-### 1. F1 Ghost Car 👻
-**Compare drivers lap-by-lap like never before.** An interactive CLI tool for ghost car comparisons and race replays.
+### 1. Race Prediction 📊
+Monte Carlo simulation engine with **12 model versions** — select the model, season, Grand Prix, and session to generate win-probability predictions.
 
-**Features:**
-- 👻 **Ghost Car Lap Comparison** - Compare two drivers' fastest laps head-to-head with animated replay
-- 🎬 **Single Driver Lap Replay** - Watch one driver's fastest lap unfold with live telemetry
-- 🏁 **Ghost Car Race Replay** - Full race comparison across all laps with gap evolution
-- 🗓️ Browse F1 calendars from 2018 onwards (including pre-season testing)
-- 🟦 **DRS Zones** - DRS activation zones highlighted on track (toggle with D key)
-- 🎮 **Full Replay Control** - Navigate by lap (←/→) or within laps (↑/↓), jump with Page Up/Down
+### 2. Ghost Car Comparison 👻
+Compare two drivers' fastest laps head-to-head. Interactive track map with full telemetry overlay (speed, throttle, brake, DRS).
 
-**Race Replay Keyboard Controls:**
-| Key | Action |
-|-----|--------|
-| Space | Play/Pause |
-| ←/→ | Previous/Next Lap |
-| ↑/↓ | Navigate within lap (1% increments) |
-| Page Up/Down | Jump within lap (10% increments) |
-| Home/End | Jump to start/end of lap |
-| D | Toggle DRS zone display |
-| R | Reset to lap 1 |
-| +/- | Adjust playback speed |
+### 3. Best Car Analysis 🏆
+Which car dominated each era? Compare the **Mercedes W11**, **Red Bull RB19**, and **McLaren MCL39** with qualifying gaps and season progression charts.
 
-> **Fastest Lap Modes** use the best lap from any session. **Race Replay** compares all laps from Race/Sprint sessions.
+---
 
-### 2. F1 Prediction
-Machine learning models for predicting race outcomes based on historical data, qualifying results, and track characteristics.
+## 🏗️ Architecture
 
-**Features:**
-- Race winner predictions
-- Grid position analysis
-- Historical performance benchmarking (2023-2025)
-- Track-specific insights
-
-### 3. Best Car Analysis
-Statistical analysis to determine which car has the performance advantage across different circuits and conditions.
-
-**Features:**
-- Car performance comparisons
-- Circuit-specific analysis
-- Data visualization and export
+```
+Dons-F1-Addiction/
+├── frontend/                     # React + Vite + TypeScript
+│   ├── src/
+│   │   ├── components/           # Layout, TrackMap, TelemetryChart, Spinner
+│   │   ├── pages/                # HomePage, PredictionPage, GhostCarPage, BestCarPage
+│   │   ├── styles/               # F1-themed global CSS
+│   │   ├── api.ts                # Typed API client
+│   │   └── App.tsx               # Router
+│   ├── package.json
+│   └── vite.config.ts            # Proxy /api → backend
+│
+├── backend/                      # FastAPI REST API
+│   ├── app.py                    # Application entry point
+│   ├── routers/
+│   │   ├── common.py             # Seasons, schedules, drivers
+│   │   ├── prediction.py         # Prediction model runner
+│   │   ├── ghost_car.py          # Telemetry & comparison
+│   │   └── best_car.py           # Era analysis & gaps
+│   └── requirements.txt
+│
+├── formula1-prediction/          # Original predictor models (v1-v12)
+├── formula1-ghost-car/           # Original ghost car CLI & data loader
+├── formula1-best-car/            # Original best car analysis
+└── README.md
+```
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.9 or higher
-- pip (Python package manager)
+- **Python 3.10+**
+- **Node.js 18+** and npm
+- pip
 
-### Installation
+### 1. Clone & setup Python environment
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/DonMMK/Dons-F1-Addiction.git
-   cd Dons-F1-Addiction
-   ```
+```bash
+git clone https://github.com/DonMMK/Dons-F1-Addiction.git
+cd Dons-F1-Addiction
 
-2. **Create a virtual environment**
-   ```bash
-   python3 -m venv f1-venv
-   ```
+python3 -m venv f1-venv
+source f1-venv/bin/activate   # macOS/Linux
+pip install -r backend/requirements.txt
+```
 
-3. **Activate the virtual environment**
-   ```bash
-   # macOS/Linux
-   source f1-venv/bin/activate
-   
-   # Windows
-   f1-venv\Scripts\activate
-   ```
+### 2. Start the backend
 
-4. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+source f1-venv/bin/activate
+uvicorn backend.app:app --reload --port 8000
+```
+
+The API is now live at `http://localhost:8000`. Explore docs at `http://localhost:8000/docs`.
+
+### 3. Start the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser. The Vite dev server proxies `/api` requests to the backend.
 
 ---
 
 ## 🎮 Usage
 
-### F1 Ghost Car
+| Page | URL | Description |
+|------|-----|-------------|
+| **Home** | `/` | Overview of available tools |
+| **Prediction** | `/prediction` | Select model, GP, session → run Monte Carlo simulation |
+| **Ghost Car** | `/ghost-car` | Select two drivers → see track map + telemetry comparison |
+| **Best Car** | `/best-car` | Pick an era → season progression + qualifying gap analysis |
 
-```bash
-cd formula1-ghost-car
-python main.py
-```
+### Prediction Models
 
-Use the interactive CLI to:
-1. **Choose your mode**: 👻 Ghost Car Comparison, 🎬 Single Lap Replay, or 🏁 Race Replay
-2. Select a season (2018-2026)
-3. Choose a race or pre-season testing event
-4. Pick a session:
-   - **Race Replay**: Requires Race (R) or Sprint (S) session
-   - **Other modes**: Any session (fastest lap is extracted)
-5. Select driver(s) based on your chosen mode
+All predictor versions (v1 through v12) are available in the dropdown. Each version uses a different simulation approach:
 
-### F1 Prediction
-
-```bash
-cd formula1-prediction
-python f1_predictor.py
-```
-
-### Best Car Analysis
-
-```bash
-cd formula1-best-car
-python main.py
-```
-
----
-
-## 📁 Project Structure
-
-```
-Dons-F1-Addiction/
-├── formula1-ghost-car/           # Ghost Car comparison tool 👻
-│   ├── main.py                   # Entry point
-│   ├── cli.py                    # Interactive command-line interface
-│   ├── data_loader.py            # FastF1 data loading utilities
-│   ├── track_visualizer.py       # Track and telemetry plots
-│   ├── lap_replay.py             # Animated lap replays
-│   └── ghost_comparison.py       # Driver comparison animations
-│
-├── formula1-prediction/          # Race outcome predictions
-│   ├── f1_predictor_v*.py        # Main prediction model
-│   └── benchmark_*.py            # Historical accuracy tests
-│
-├── formula1-best-car/            # Car performance analysis
-│   ├── main.py                   # Entry point
-│   ├── analysis.py               # Statistical analysis
-│   └── visualizations.py         # Performance charts
-│
-└── requirements.txt              # Python dependencies
-```
+| Model | Approach |
+|-------|----------|
+| v1 | Physics + ML (fuel correction, tyre deg, Linear Regression) |
+| v2–v3 | Increased Monte Carlo runs, better stint detection |
+| v4–v6 | Track-specific overtake difficulty, safety car probability |
+| v7–v9 | Anomaly detection, driver tier buffs |
+| v10–v11 | Simplified qualifying-anchor simulation |
+| **v12** | 2026-ready: 22-driver grid, new teams (Cadillac), driver tiers |
 
 ---
 
 ## 🛠️ Technologies
 
-- **[FastF1](https://github.com/theOehrly/Fast-F1)** - F1 telemetry and timing data
-- **[Matplotlib](https://matplotlib.org/)** - Data visualization
-- **[Rich](https://rich.readthedocs.io/)** - Beautiful terminal output
-- **[Questionary](https://questionary.readthedocs.io/)** - Interactive CLI prompts
-- **[Pandas](https://pandas.pydata.org/)** - Data manipulation
-- **[NumPy](https://numpy.org/)** - Numerical computing
+| Layer | Stack |
+|-------|-------|
+| **Frontend** | React 18, TypeScript, Vite, Recharts, React Router |
+| **Backend** | FastAPI, Uvicorn, Pydantic |
+| **Data** | FastF1, Pandas, NumPy, scikit-learn |
+| **Styling** | Custom CSS (F1.com-inspired dark theme, Titillium Web) |
 
 ---
 
-## 📝 License
+## 📝 Original CLI Tools
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The original CLI tools still work independently:
+
+```bash
+# Ghost Car (interactive CLI)
+cd formula1-ghost-car && python main.py
+
+# Prediction (CLI)
+cd formula1-prediction && python f1_predictor_v12.py --year 2026 --gp "Australia" --session Q
+
+# Best Car Analysis
+cd formula1-best-car && python main.py
+```
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- [FastF1](https://github.com/theOehrly/Fast-F1) for providing access to F1 telemetry data
+- [FastF1](https://github.com/theOehrly/Fast-F1) for F1 telemetry data
 - Formula 1 for the incredible sport that fuels this addiction
-
-
-## Alternatives 
-https://openf1.org/
-
-https://my.sportmonks.com/subscriptions/create/sport/2/plans
