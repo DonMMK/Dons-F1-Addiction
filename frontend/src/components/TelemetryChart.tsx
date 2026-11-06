@@ -13,7 +13,7 @@ import {
 
 interface Props {
   title: string
-  data: Record<string, number>[]
+  data: Record<string, number | null>[]
   dataKey1: string
   dataKey2?: string
   color1?: string

@@ -35,6 +35,10 @@ export function ComparisonView({ data }: { data: ComparisonResponse }) {
   );
   return (
     <>
+      {data.dataSource && <p className="notice">Source: {data.dataSource}</p>}
+      {data.warnings?.map((warning) => (
+        <p className="notice" key={warning}>{warning}</p>
+      ))}
       <div className="stats-grid">
         <div>
           <small>
@@ -97,12 +101,14 @@ export function ComparisonView({ data }: { data: ComparisonResponse }) {
           dataKey1="gearA"
           dataKey2="gearB"
         />
-        <TelemetryChart
-          title="DRS provider code"
-          data={chart}
-          dataKey1="drsA"
-          dataKey2="drsB"
-        />
+        {data.comparison.drs1.some((v) => v !== null) || data.comparison.drs2.some((v) => v !== null) ? (
+          <TelemetryChart
+            title="DRS provider code"
+            data={chart}
+            dataKey1="drsA"
+            dataKey2="drsB"
+          />
+        ) : <p className="notice">DRS data is unavailable for these laps.</p>}
       </div>
     </>
   );
@@ -220,7 +226,7 @@ export default function GhostCarPage() {
         </button>
       </div>
       {[schedule, sessions, drivers, comparison].map((state, i) => (
-        <DataState key={i} loading={state.loading} error={state.error} />
+        <DataState key={i} {...state} />
       ))}
       {comparison.data && <ComparisonView data={comparison.data} />}
     </>

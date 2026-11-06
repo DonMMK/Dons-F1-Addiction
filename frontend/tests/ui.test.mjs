@@ -107,6 +107,8 @@ const lap = {
 };
 const comp = {
   eventName: "Test GP",
+  dataSource: "OpenF1 historical timing",
+  warnings: ["Distance estimated from speed; DRS unavailable"],
   driver1: lap,
   driver2: { ...lap, abbreviation: "BBB" },
   comparison: {
@@ -121,13 +123,22 @@ const comp = {
     brake2: [0, 1, 0],
     gear1: [3, 4, 3],
     gear2: [3, 4, 3],
-    drs1: [0, 10, 0],
-    drs2: [0, 10, 0],
+    drs1: [null, null, null],
+    drs2: [null, null, null],
   },
 };
 const calls = [];
+let failure = null;
 globalThis.fetch = async (url, options = {}) => {
   calls.push(String(url));
+  if (failure && String(url).includes(failure.match)) {
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (failure.code) headers.set("X-F1-Data-Error", failure.code);
+    if (failure.retryAfter) headers.set("Retry-After", failure.retryAfter);
+    return new Response(JSON.stringify({ detail: failure.detail }), {
+      status: failure.status, headers,
+    });
+  }
   let data;
   if (url === "/api/seasons") data = { seasons: [2025, current] };
   else if (String(url).startsWith("/api/standings/"))
@@ -218,6 +229,7 @@ globalThis.fetch = async (url, options = {}) => {
       year: current,
       round: 1,
       eventName: "Test GP",
+      dataSources: { Q: "Jolpica", R: "OpenF1 historical timing" },
       teams: [
         {
           team: "McLaren",
@@ -325,6 +337,7 @@ try {
   assert.match(text(), /Weekend by Weekend/);
   assert.match(text(), /Quali\/race reversal/);
   assert.match(text(), /Fuel mass/);
+  assert.match(text(), /Sources: Q: Jolpica/);
   await navigate("/prediction");
   assert.match(text(), /What changed in v12/);
   await click("Run & save");
@@ -333,6 +346,8 @@ try {
   await navigate("/ghost-car");
   await click("Compare");
   assert.match(text(), /Bird’s-eye lap replay/);
+  assert.match(text(), /Source: OpenF1 historical timing/);
+  assert.match(text(), /Distance estimated from speed/);
   await click("Play");
   assert.match(text(), /Pause/);
   await click("Pause");
@@ -344,8 +359,52 @@ try {
   assert.match(text(), /Your year in racing/);
   assert.match(text(), /venue dates/);
   assert.ok(calls.some((p) => p.includes("/prediction/evaluate/saved-one")));
+
+  // Expected publication delays are a calm status, with a manual retry only.
+  failure = { match: "/drivers/", status: 425, code: "session_not_started",
+    retryAfter: "1", detail: "This session has not started yet." };
+  await navigate("/ghost-car");
+  assert.match(text(), /This session hasn't started yet/);
+  assert.match(text(), /Choose an earlier completed session/);
+  assert.match(text(), /your local time/);
+  assert.equal(document.querySelectorAll('[role="alert"]').length, 0);
+  assert.ok(document.querySelector('[role="status"]'));
+  const retry = [...document.querySelectorAll("button")].find((b) => b.textContent === "Check again");
+  assert.ok(retry.disabled);
+  const driverCalls = () => calls.filter((p) => p.includes("/drivers/")).length;
+  const before = driverCalls();
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
+  assert.equal(driverCalls(), before, "A pending session must not auto-poll");
+  assert.equal(retry.disabled, false);
+  failure = null;
+  await click("Check again");
+  assert.equal(driverCalls(), before + 1);
+  assert.doesNotMatch(text(), /This session hasn't started yet/);
+
+  failure = { match: "/drivers/", status: 425, code: "classification_not_published",
+    retryAfter: new Date(Date.now() + 60_000).toUTCString(), detail: "The session classification has not been published yet." };
+  await navigate("/ghost-car");
+  assert.match(text(), /Session results aren't published yet/);
+  assert.ok([...document.querySelectorAll("button")].find((b) => b.textContent === "Check again").disabled);
+  failure = null;
+  await navigate("/");
+  assert.doesNotMatch(text(), /Session results aren't published yet/);
+
+  failure = { match: "/drivers/", status: 502, detail: "Timing provider unavailable" };
+  await navigate("/ghost-car");
+  assert.match(document.querySelector('[role="alert"]').textContent, /Timing provider unavailable/);
+  assert.doesNotMatch(text(), /Session data isn't available yet/);
+
+  failure = { match: "/prediction/run", status: 425,
+    detail: "Practice results are still being published." };
+  await navigate("/prediction");
+  await click("Run & save");
+  assert.match(text(), /Session data isn't available yet/);
+  assert.match(text(), /Practice results are still being published/);
+  assert.equal(document.querySelectorAll('[role="alert"]').length, 0);
+  failure = null;
   console.log(
-    "PASS: six routes; standings replay, constructors, teammate evidence, forecast/save/score, lap playback and engineering context",
+    "PASS: six routes; source notices, 425 publication status, retry timing/manual recovery, genuine errors, predictions and replay",
   );
 } finally {
   if (appRoot) await act(async () => appRoot.unmount());

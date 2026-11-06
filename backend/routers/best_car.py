@@ -94,7 +94,7 @@ ERAS = {
 
 
 def _load_session(year, race, session_type):
-    return load_session(year, race, session_type)
+    return load_session(year, race, session_type, results_only=session_type == "Q")
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +143,8 @@ def gap_to_leader(year: int, race: str):
             item["gapPercent"] = round((item["gap"] / leader) * 100, 3) if leader else 0
 
         return {"race": race, "year": year, "gaps": fastest_laps}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -160,8 +162,12 @@ def _season_progression(era_key: str, progress=None):
     drivers = era["primaryCar"]["drivers"]
 
     try:
-        schedule = fastf1.get_event_schedule(year)
+        from ..services.events import get_schedule
+
+        schedule = get_schedule(year)
         races = schedule[schedule["EventFormat"] != "testing"]["EventName"].tolist()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -187,6 +193,10 @@ def _season_progression(era_key: str, progress=None):
                     "gapPercent": round(100 * (p / r - 1), 4),
                 }
             )
+        except HTTPException as exc:
+            if exc.status_code >= 500:
+                raise
+            unavailable.append(race_name)
         except Exception:
             unavailable.append(race_name)
     if progress:
@@ -229,6 +239,8 @@ def race_pace(year: int, race: str):
 
         pace_data.sort(key=lambda x: x["avgLapTime"])
         return {"year": year, "race": race, "pace": pace_data}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -206,3 +206,14 @@ jobs are reused for an hour. A backend restart expires those jobs; the UI offers
 an explicit error on a lost job. Use a shared queue before adding server workers.
 FastF1 upstream caching remains in addition to a bounded session-object cache.
 Network requests are subject to provider availability and rate limits.
+
+## Follow-up: archive access and public result separation
+
+The data-loading follow-up supersedes the original generic missing-data handling.
+See [F1_DATA_LOADING.md](F1_DATA_LOADING.md) for the FastF1 3.9.2 requirement,
+optional F1TV authentication, preserved caches and public-classification fallback.
+The subsequent OpenF1 patch adds free historical timing (2023+), with a separate
+conservative quality screen, lazy per-lap telemetry, source warnings, persistent
+cache and shared request throttling. No F1TV login is needed for that route.
+Qualifying / outcome labels can use published results without protected timing.
+Raw practice evidence is still optional and explicitly marked missing.

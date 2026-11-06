@@ -36,7 +36,7 @@ FEATURES = [
 
 
 def features(year, event, session_type="Q"):
-    session = load_session(year, event, session_type)
+    session = load_session(year, event, session_type, results_only=session_type == "Q")
     cutoff = pd.Timestamp(session.date)
     if cutoff.tzinfo is None:
         cutoff = cutoff.tz_localize("UTC")
@@ -114,6 +114,15 @@ def features(year, event, session_type="Q"):
         {
             "cutoff": cutoff.isoformat(),
             "practiceSession": practice_kind,
+            "practiceSource": getattr(practice, "data_source", None),
+            "dataWarnings": (
+                list(getattr(practice, "data_warnings", []))
+                if practice is not None
+                else [
+                    "No pre-cutoff raw practice data is available. Practice features use the model's explicit missing-data indicator."
+                ]
+            ),
+            "qualifyingSource": getattr(session, "data_source", "FastF1"),
             "featureNames": FEATURES,
             "qualifyingBasis": "Q1" if session_type == "Q" else "practice best lap",
         },
@@ -193,7 +202,9 @@ def train(year_from, year_to, through_round=None, min_events=15):
 
     events, skipped = [], []
     for year in range(year_from, year_to + 1):
-        schedule = fastf1.get_event_schedule(year, include_testing=False)
+        from .events import get_schedule
+
+        schedule = get_schedule(year, include_testing=False)
         for _, event in schedule.iterrows():
             rd = int(event["RoundNumber"])
             if year == year_to and through_round is not None and rd > through_round:
@@ -205,7 +216,7 @@ def train(year_from, year_to, through_round=None, min_events=15):
                 continue
             try:
                 qualifying, entries, meta = features(year, rd, "Q")
-                race = load_session(year, rd, "R")
+                race = load_session(year, rd, "R", results_only=True)
                 if not finished(race):
                     raise ValueError("Race not finished")
                 results = race.results.sort_values("Position")
@@ -213,15 +224,13 @@ def train(year_from, year_to, through_round=None, min_events=15):
                 if winner not in {e["driver"] for e in entries}:
                     raise ValueError("Winner missing from pre-race field")
                 # Require label availability after the race, not just its start.
-                dates = pd.to_datetime(race.laps.get("LapStartDate"), utc=True).dropna()
-                label_cutoff = max(
-                    (
-                        pd.Timestamp(race.date).tz_localize("UTC")
-                        if pd.Timestamp(race.date).tzinfo is None
-                        else pd.Timestamp(race.date)
-                    ),
-                    dates.max(),
-                ) + pd.Timedelta(hours=6)
+                # A published classification is enough for labels; don't require
+                # protected raw laps. Use a conservative next-day availability
+                # boundary when exact result publication time is unobserved.
+                race_start = pd.Timestamp(race.date)
+                if race_start.tzinfo is None:
+                    race_start = race_start.tz_localize("UTC")
+                label_cutoff = race_start + pd.Timedelta(days=1)
                 if label_cutoff > pd.Timestamp.now(tz="UTC"):
                     raise ValueError("Result publication buffer has not elapsed")
                 events.append(
@@ -233,6 +242,8 @@ def train(year_from, year_to, through_round=None, min_events=15):
                         "entries": entries,
                         "cutoff": meta["cutoff"],
                         "labelCutoff": label_cutoff.isoformat(),
+                        "qualifyingSource": meta.get("qualifyingSource"),
+                        "practiceSource": meta.get("practiceSource"),
                     }
                 )
             except Exception as exc:
@@ -277,7 +288,8 @@ def train(year_from, year_to, through_round=None, min_events=15):
         "cutoff": events[-1]["labelCutoff"],
         "features": FEATURES,
         "c": best_c,
-        "algorithmVersion": 1,
+        "algorithmVersion": 2,
+        "timingPolicy": "OpenF1 screened historical laps or FastF1 validated cache/archive",
         "datasetHash": hashlib.sha256(
             json.dumps(events, sort_keys=True).encode()
         ).hexdigest(),

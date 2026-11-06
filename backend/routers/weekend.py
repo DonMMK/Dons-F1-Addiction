@@ -8,6 +8,8 @@ router = APIRouter()
 def get_weekend(year: int, round_number: int):
     try:
         return weekend(year, round_number)
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
     except Exception as exc:

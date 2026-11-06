@@ -292,7 +292,7 @@ class Models(unittest.TestCase):
             date = pd.Timestamp("2024-01-01", tz="UTC") + pd.Timedelta(days=rd * 7)
             return None, event["entries"], {"cutoff": date.isoformat()}
 
-        def race_stub(year, rd, kind):
+        def race_stub(year, rd, kind, **kwargs):
             event = fake_events(20)[rd - 1]
             date = pd.Timestamp("2024-01-01", tz="UTC") + pd.Timedelta(
                 days=rd * 7, hours=24

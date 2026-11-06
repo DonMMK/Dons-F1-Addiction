@@ -41,17 +41,27 @@ The Vite development proxy forwards `/api` to the backend. A production host mus
 serve the React assets and forward `/api` to FastAPI; `vite preview` alone does not
 provide this backend proxy.
 
+No F1TV account is needed for historical analysis from 2023 onwards. The backend
+uses existing FastF1 caches and free OpenF1 historical timing, with Jolpica for
+published classifications. See [Backend data loading](docs/F1_DATA_LOADING.md)
+for setup, diagnostics, coverage and optional archive access.
+
 The uploaded code export excluded lockfiles, so this patch deliberately leaves
 your existing `frontend/package-lock.json` untouched. `npm install` updates it;
 commit the resulting lockfile in your repository after reviewing it.
 
 ## Runtime data
 
-`var/` holds the unified FastF1 cache, SQLite prediction history and JSON model
-iterations. Set `F1_DATA_DIR` to a persistent absolute path when deploying. Keep
+`var/` holds SQLite prediction history and JSON model iterations. The backend
+reuses populated legacy FastF1 caches when available, otherwise `var/fastf1`.
+Set `F1_CACHE_DIR` to select the cache explicitly. Set `F1_DATA_DIR` to a persistent absolute path when deploying. Keep
 this directory out of version control (add `/var/` to your repository's existing
 `.gitignore`). Existing CLI tools and their caches are retained; the web backend
-uses the unified cache. First loads need network access and can take time.
+shares the selected cache. OpenF1 responses and its shared rate budget are stored
+in `var/openf1/openf1.sqlite3`. First uncached loads need network access and can
+take time; subsequent requests reuse the cache. Set `F1_TIMING_PROVIDER=openf1`
+to force the free provider, or `fastf1` for optional native archive access.
+The default `auto` prefers existing timing caches, then OpenF1.
 
 Season analyses run in a bounded background queue and report their progress. Run
 one Uvicorn worker with this in-process job queue; multiple independent workers

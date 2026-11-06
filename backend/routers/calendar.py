@@ -16,7 +16,9 @@ router = APIRouter()
 
 @lru_cache(maxsize=6)
 def f1_calendar(year, bucket):
-    schedule = fastf1.get_event_schedule(year, include_testing=False)
+    from ..services.events import get_schedule
+
+    schedule = get_schedule(year, include_testing=False)
     events = []
     for _, event in schedule.iterrows():
         for index in range(1, 6):

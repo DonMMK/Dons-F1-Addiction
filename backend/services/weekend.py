@@ -5,7 +5,8 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-from .data import clean_laps, iso, load_session, number, seconds
+from .data import clean_laps, iso, load_session, number, seconds, optional_data
+from .loading_errors import SessionDataError
 
 LIMITS = [
     "Same team does not guarantee identical upgrades, setup, damage or engine modes.",
@@ -63,7 +64,37 @@ def interval(pairs):
     return [number(x) for x in np.quantile(values, [0.025, 0.975])]
 
 
+def published_qualifying_gap(session, first, second):
+    rows = session.results.set_index("Abbreviation")
+    if first in rows.index and second in rows.index:
+        for column in ("Q3", "Q2", "Q1"):
+            a, b = rows.loc[first].get(column), rows.loc[second].get(column)
+            if pd.notna(a) and pd.notna(b):
+                return {
+                    "segment": column,
+                    "deltaSeconds": number((a - b).total_seconds()),
+                    "firstSeconds": seconds(a),
+                    "secondSeconds": seconds(b),
+                    "reason": "Published Jolpica qualifying classification, deepest shared timed segment. This comparison uses classified times, not raw lap/flag checks.",
+                }
+    return {
+        "segment": None,
+        "deltaSeconds": None,
+        "reason": "No shared timed qualifying segment in the published classification",
+    }
+
+
 def qualifying_gap(session, first, second):
+    if getattr(session, "published_results", False) or getattr(
+        session, "qualifying_classification", False
+    ):
+        return published_qualifying_gap(session, first, second)
+    if getattr(session, "data_provider", None) == "openf1":
+        return {
+            "segment": None,
+            "deltaSeconds": None,
+            "reason": "Shared qualifying segments require a published qualifying classification; segments are not guessed from lap times.",
+        }
     try:
         stages = session.laps.split_qualifying_sessions()
     except (ValueError, AttributeError):
@@ -170,14 +201,35 @@ def field_pace(race, qualifying):
 
 
 def weekend(year, round_number):
-    sessions, errors = {}, []
+    sessions, errors, failures = {}, [], []
     for kind in ("Q", "R"):
         try:
             sessions[kind] = load_session(year, round_number, kind)
+        except SessionDataError as exc:
+            failures.append(exc)
+            errors.append(f"{kind} raw timing unavailable: {exc.detail}")
+            if kind == "Q":
+                try:
+                    sessions[kind] = load_session(
+                        year, round_number, kind, results_only=True
+                    )
+                    errors.append(
+                        "Qualifying comparison uses published results; raw tyre/flag checks are unavailable."
+                    )
+                except SessionDataError as fallback:
+                    failures.append(fallback)
         except Exception:
-            errors.append(f"{kind} data unavailable or not published yet")
+            errors.append(f"{kind} timing data unavailable or not published yet")
     if not sessions:
-        raise ValueError("No qualifying or race timing data available for this weekend")
+        if failures:
+            raise failures[0]
+        raise SessionDataError(
+            "weekend_data_unavailable",
+            "Qualifying and race data could not be loaded. Run python -m backend.check_data with --timing.",
+            502,
+        )
+    for kind, session in sessions.items():
+        errors.extend(f"{kind}: {w}" for w in getattr(session, "data_warnings", []))
     source = sessions.get("R") or sessions.get("Q")
     race = sessions.get("R")
     quali = sessions.get("Q")
@@ -240,13 +292,13 @@ def weekend(year, round_number):
                 }
             )
     weather = None
-    wd = getattr(source, "weather_data", None)
+    wd = optional_data(source, "weather_data")
     if wd is not None and not wd.empty:
         weather = {
             key: number(wd[key].mean())
             for key in ("AirTemp", "TrackTemp", "Humidity", "WindSpeed")
         }
-        weather["rainfall"] = bool(wd["Rainfall"].any())
+        weather["rainfall"] = bool(wd["Rainfall"].dropna().gt(0).any())
     return {
         "year": year,
         "round": round_number,
@@ -255,8 +307,12 @@ def weekend(year, round_number):
         "weather": weather,
         "fieldPace": field_pace(race, quali) if race is not None else [],
         "warnings": errors,
+        "dataSources": {
+            kind: getattr(value, "data_source", "FastF1 timing archive / cache")
+            for kind, value in sessions.items()
+        },
         "limitations": LIMITS,
-        "method": "A minus B; negative means A faster. Race pairs: same lap, same compound, tyre age within one lap; accurate, non-deleted, non-generated, green-flag and no pit laps. Exploratory 95% block-bootstrap interval needs 8 pairs.",
+        "method": "A minus B; negative means A faster. Race pairs: same lap, same compound, tyre age within one lap. FastF1 samples require accurate, non-deleted, non-generated, green-flag and no pit laps; OpenF1 samples use the distinct conservative sector/pit/race-control screening described in the source warnings. Exploratory 95% block-bootstrap interval needs 8 pairs.",
         "unavailable": [
             "Fuel mass (kg)",
             "Setup settings",

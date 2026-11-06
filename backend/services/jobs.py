@@ -56,10 +56,17 @@ def start(key, work):
             result = work(progress)
             with LOCK:
                 job.update(data=result, status="complete", updated=time.time())
-        except Exception:
+        except Exception as exc:
+            from fastapi import HTTPException
+
+            message = (
+                str(exc.detail)
+                if isinstance(exc, HTTPException)
+                else "Season data could not be loaded. Retry later."
+            )
             with LOCK:
                 job.update(
-                    error="Season data could not be loaded. Retry later.",
+                    error=message,
                     status="failed",
                     updated=time.time(),
                 )

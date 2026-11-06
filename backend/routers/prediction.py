@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ..services.data import ROOT, finished, iso, load_session, number, utc_now
+from ..services.loading_errors import SessionDataError
 from ..services.empirical_model import artifacts, features, infer
 from ..services import prediction_store as store
 from .common import get_schedule
@@ -148,7 +149,7 @@ def legacy(req, session):
     module = _load_module(paths[model])
     frame = grid_data(session, req.session)
     grid = frame["Abbreviation"].dropna().tolist()
-    profile, warnings = {}, [
+    profile, warnings = {}, list(getattr(session, "data_warnings", [])) + [
         "Legacy simulation uses manually configured assumptions and may contain driver-specific bonuses. These are not empirical skill estimates."
     ]
     params = inspect.signature(module.RaceSimulator.__init__).parameters
@@ -191,6 +192,7 @@ def legacy(req, session):
                         except Exception:
                             continue
                 if practice is not None:
+                    warnings.extend(getattr(practice, "data_warnings", []))
                     analyzer = module.TelemetryAnalyzer.__new__(
                         module.TelemetryAnalyzer
                     )
@@ -225,13 +227,18 @@ def legacy(req, session):
 @router.post("/run")
 def run_prediction(req: PredictionRequest):
     try:
-        session = load_session(req.year, req.gp, req.session)
+        session = load_session(
+            req.year, req.gp, req.session, results_only=req.session == "Q"
+        )
         if not finished(session):
             raise ValueError(
                 "Prediction input session has not finished; timing may still be provisional"
             )
         cutoff, trained_through, margins = iso(session.date), None, None
-        inputs = {"sessionStart": cutoff}
+        inputs = {
+            "sessionStart": cutoff,
+            "dataSource": getattr(session, "data_source", "FastF1"),
+        }
         source_hash = None
         if req.model.startswith("v13-"):
             artifact = next((a for a in artifacts() if a["id"] == req.model), None)
@@ -258,7 +265,7 @@ def run_prediction(req: PredictionRequest):
                 artifact["trainedThrough"],
                 artifact["id"],
             )
-            warnings = artifact["limitations"]
+            warnings = artifact["limitations"] + meta.get("dataWarnings", [])
         else:
             probs, margins, total, warnings, model = legacy(req, session)
             source_hash = hashlib.sha256(
@@ -316,6 +323,8 @@ def run_prediction(req: PredictionRequest):
                 ],
             }
         )
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except Exception as exc:
@@ -345,7 +354,7 @@ def evaluate(run_id: str):
     if run is None:
         raise HTTPException(404, "Prediction snapshot not found")
     try:
-        race = load_session(run["year"], run["round"], "R")
+        race = load_session(run["year"], run["round"], "R", results_only=True)
         if not finished(race):
             return {
                 "status": "pending",
@@ -381,6 +390,10 @@ def evaluate(run_id: str):
                 for _, r in results.iterrows()
             ],
         }
+    except SessionDataError as exc:
+        if exc.status_code == 425:
+            return {"status": "pending", "detail": str(exc.detail)}
+        raise
     except Exception:
         return {
             "status": "pending",

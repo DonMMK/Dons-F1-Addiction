@@ -14,7 +14,19 @@ from pathlib import Path
 
 router = APIRouter()
 
-from ..services.data import load_session, CACHE_DIR
+from ..services.data import load_session, CACHE_DIR, optional_data, number
+from ..services.openf1 import TELEMETRY_NOTE
+
+
+def _provenance(session):
+    warnings = list(getattr(session, "data_warnings", []))
+    if getattr(session, "data_provider", None) == "openf1":
+        warnings.append(TELEMETRY_NOTE)
+    return {
+        "dataSource": getattr(session, "data_source", "FastF1"),
+        "warnings": warnings,
+    }
+
 
 # ---------------------------------------------------------------------------
 # Helpers – reuse data_loader logic without importing the CLI module
@@ -36,7 +48,6 @@ def _telemetry_to_dict(telemetry) -> dict:
         "nGear",
         "Distance",
         "Time",
-        "DRS",
     ]
     telemetry = (
         telemetry.dropna(subset=required).sort_values("Time").drop_duplicates("Time")
@@ -53,11 +64,16 @@ def _telemetry_to_dict(telemetry) -> dict:
             "brake": "Brake",
             "gear": "nGear",
             "distance": "Distance",
-            "drs": "DRS",
         }.items()
     }
+    result["drs"] = [
+        number(v)
+        for v in telemetry.get("DRS", pd.Series(np.nan, index=telemetry.index))
+    ]
     result["time"] = telemetry["Time"].dt.total_seconds().tolist()
-    if not all(np.isfinite(v) for values in result.values() for v in values):
+    if not all(
+        v is None or np.isfinite(v) for values in result.values() for v in values
+    ):
         raise HTTPException(404, "Telemetry contains non-finite values")
     return result
 
@@ -99,6 +115,7 @@ def get_track_layout(year: int, round_number: int, session_type: str):
             pass
 
         return {
+            **_provenance(session),
             "track": {"x": tel["X"].tolist(), "y": tel["Y"].tolist()},
             "circuitInfo": circuit_info,
             "eventName": str(session.event.get("EventName", "")),
@@ -125,6 +142,7 @@ def get_fastest_lap(year: int, round_number: int, session_type: str, driver: str
 
         lap_time = fastest["LapTime"]
         return {
+            **_provenance(session),
             "driver": driver,
             "team": str(fastest.get("Team", "Unknown")),
             "lapTime": _format_lap_time(lap_time),
@@ -191,6 +209,7 @@ def compare_drivers(
         ]
 
         return {
+            **_provenance(session),
             "eventName": str(session.event.get("EventName", "")),
             "driver1": {
                 "abbreviation": driver1,
@@ -220,18 +239,20 @@ def compare_drivers(
 def get_weather(year: int, round_number: int, session_type: str):
     """Return session weather data."""
     try:
-        session = _load_session(year, round_number, session_type)
-        wd = session.weather_data
+        session = load_session(year, round_number, session_type)
+        wd = optional_data(session, "weather_data")
         if wd is None or wd.empty:
             return {"weather": None}
         return {
             "weather": {
-                "airTemp": round(float(wd["AirTemp"].mean()), 1),
-                "trackTemp": round(float(wd["TrackTemp"].mean()), 1),
-                "humidity": round(float(wd["Humidity"].mean()), 1),
-                "windSpeed": round(float(wd["WindSpeed"].mean()), 1),
-                "rainfall": bool(wd["Rainfall"].any()),
+                "airTemp": number(wd["AirTemp"].mean(), 1),
+                "trackTemp": number(wd["TrackTemp"].mean(), 1),
+                "humidity": number(wd["Humidity"].mean(), 1),
+                "windSpeed": number(wd["WindSpeed"].mean(), 1),
+                "rainfall": bool(wd["Rainfall"].dropna().gt(0).any()),
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

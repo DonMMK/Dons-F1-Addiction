@@ -10,6 +10,7 @@ from pathlib import Path
 router = APIRouter()
 
 from ..services.data import load_session, CACHE_DIR
+from ..services import events as public_events
 
 
 @router.get("/seasons")
@@ -24,7 +25,7 @@ def get_seasons():
 def get_schedule(year: int):
     """Return full event schedule for a season."""
     try:
-        schedule = fastf1.get_event_schedule(year, include_testing=True)
+        schedule = public_events.get_schedule(year, include_testing=True)
         events = []
         testing_count = 0
 
@@ -63,6 +64,8 @@ def get_schedule(year: int):
             )
 
         return {"year": year, "events": events}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -71,7 +74,7 @@ def get_schedule(year: int):
 def get_sessions(year: int, round_number: int):
     """Return available session types for a given event."""
     try:
-        event = fastf1.get_event(year, round_number)
+        event = public_events.get_event(year, round_number)
         sessions = []
         session_map = {
             "Practice 1": "FP1",
@@ -93,6 +96,8 @@ def get_sessions(year: int, round_number: int):
                     }
                 )
         return {"sessions": sessions}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -101,7 +106,12 @@ def get_sessions(year: int, round_number: int):
 def get_drivers(year: int, round_number: int, session_type: str):
     """Return drivers who participated in a session."""
     try:
-        session = load_session(year, round_number, session_type)
+        session = load_session(
+            year,
+            round_number,
+            session_type,
+            results_only=session_type in ("Q", "R", "S"),
+        )
         drivers = []
         for _, row in session.results.iterrows():
             drivers.append(
@@ -113,5 +123,7 @@ def get_drivers(year: int, round_number: int, session_type: str):
                 }
             )
         return {"drivers": drivers}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

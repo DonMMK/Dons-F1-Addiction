@@ -85,6 +85,12 @@ export default function WeekendPage() {
       {report.data && (
         <>
           <h2>{report.data.eventName}</h2>
+          {report.data.dataSources && (
+            <p className="notice">
+              Sources: {Object.entries(report.data.dataSources)
+                .map(([session, source]) => `${session}: ${source}`).join(" · ")}
+            </p>
+          )}
           <p className="notice">{report.data.method}</p>
           {report.data.warnings.map((w) => (
             <p className="notice" key={w}>

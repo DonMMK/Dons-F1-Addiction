@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   request,
+  ApiError,
   type ModelCatalog,
   type EventInfo,
   type SessionInfo,
@@ -20,6 +21,7 @@ export default function PredictionPage() {
   const [result, setResult] = useState<PredictionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [apiError, setApiError] = useState<ApiError | null>(null);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [runId, setRunId] = useState("");
   const [evaluationRefresh, setEvaluationRefresh] = useState(0);
@@ -56,6 +58,7 @@ export default function PredictionPage() {
     setLoading(false);
     setResult(null);
     setError("");
+    setApiError(null);
   }, [year, round, session, model]);
   useEffect(() => () => pending.current?.abort(), []);
   const available = (sessions.data?.sessions ?? []).filter((s) =>
@@ -71,6 +74,7 @@ export default function PredictionPage() {
     pending.current = controller;
     setLoading(true);
     setError("");
+    setApiError(null);
     setResult(null);
     try {
       const res = await request<PredictionResponse>("/prediction/run", {
@@ -84,8 +88,10 @@ export default function PredictionPage() {
         setHistoryRefresh((v) => v + 1);
       }
     } catch (e: unknown) {
-      if (!controller.signal.aborted)
+      if (!controller.signal.aborted) {
         setError(e instanceof Error ? e.message : "Prediction failed");
+        setApiError(e instanceof ApiError ? e : null);
+      }
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
@@ -169,7 +175,7 @@ export default function PredictionPage() {
       <DataState {...catalog} />
       <DataState {...schedule} />
       <DataState {...sessions} />
-      <DataState loading={loading} error={error} />
+      <DataState loading={loading} error={error} apiError={apiError} />
       {selectedModel && (
         <section className="model-card">
           <h2>What changed in {selectedModel.id}</h2>

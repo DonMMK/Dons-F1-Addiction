@@ -1,5 +1,27 @@
 const BASE = "/api";
 
+/** Preserve provider status so expected publication delays get a helpful UI. */
+export class ApiError extends Error {
+  readonly retryAt: number | null;
+
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string | null = null,
+    retryAfter: string | null = null,
+  ) {
+    super(message);
+    this.name = "ApiError";
+    const value = retryAfter?.trim();
+    const retryAt = value
+      ? /^\d+$/.test(value)
+        ? Date.now() + Number(value) * 1000
+        : Date.parse(value)
+      : NaN;
+    this.retryAt = Number.isFinite(retryAt) ? retryAt : null;
+  }
+}
+
 export async function request<T>(
   url: string,
   options?: RequestInit,
@@ -10,7 +32,12 @@ export async function request<T>(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(body.detail ?? `Request failed: ${res.status}`);
+    throw new ApiError(
+      typeof body?.detail === "string" ? body.detail : `Request failed: ${res.status}`,
+      res.status,
+      res.headers?.get("X-F1-Data-Error") ?? null,
+      res.headers?.get("Retry-After") ?? null,
+    );
   }
   return res.json();
 }
@@ -81,7 +108,7 @@ export interface TelemetryData {
   gear: number[];
   distance: number[];
   time: number[];
-  drs: number[];
+  drs: (number | null)[];
 }
 
 export interface LapData {
@@ -96,6 +123,8 @@ export interface LapData {
 
 export interface ComparisonResponse {
   eventName: string;
+  dataSource?: string;
+  warnings?: string[];
   driver1: LapData;
   driver2: LapData;
   comparison: {
@@ -110,8 +139,8 @@ export interface ComparisonResponse {
     brake2: number[];
     gear1: number[];
     gear2: number[];
-    drs1: number[];
-    drs2: number[];
+    drs1: (number | null)[];
+    drs2: (number | null)[];
   };
 }
 
@@ -321,6 +350,7 @@ export interface FieldPace {
   relativePacePercent: number | null;
 }
 export interface WeekendResponse {
+  dataSources?: Record<string, string>;
   fieldPace?: FieldPace[];
   year: number;
   round: number;
