@@ -48,8 +48,10 @@ def normal(value):
 
 
 def official_event(event_name):
-    return {"Brazilian Grand Prix": "São Paulo Grand Prix"}.get(event_name, event_name)
-
+    return {
+        "Brazilian Grand Prix": "São Paulo Grand Prix",
+        "Barcelona Grand Prix": "Barcelona-Catalunya Grand Prix",
+    }.get(event_name, event_name)
 
 def fia_url(value):
     value = urljoin(FIA, value)
