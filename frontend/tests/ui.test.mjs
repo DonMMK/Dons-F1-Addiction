@@ -20,6 +20,45 @@ await build({
   external: ["react", "react-dom", "react-router-dom"],
   logLevel: "silent",
 });
+const mathsOutput = path.join(
+  rootDir,
+  "node_modules",
+  ".cache",
+  "f1-tyre-maths.cjs",
+);
+await build({
+  entryPoints: [path.join(rootDir, "src/tyreMath.ts")],
+  outfile: mathsOutput,
+  bundle: true,
+  platform: "node",
+  format: "cjs",
+  logLevel: "silent",
+});
+const { normaliseFuel, stintDrift } = await import(mathsOutput);
+const rawPoint = Object.freeze({
+  lap: 11,
+  age: 5,
+  stint: 1,
+  compound: "HARD",
+  seconds: 80,
+});
+assert.equal(normaliseFuel(rawPoint, 0), 80);
+assert.equal(normaliseFuel(rawPoint, 0.06), 80.6);
+assert.equal(
+  rawPoint.seconds,
+  80,
+  "An assumption must not mutate raw observations",
+);
+const trend = Array.from({ length: 10 }, (_, i) => ({
+  ...rawPoint,
+  age: i + 1,
+  lap: i + 1,
+  seconds: 80 + i * 0.1,
+}));
+assert.ok(Math.abs(stintDrift(trend, 0) - 0.1) < 1e-9);
+assert.ok(Math.abs(stintDrift(trend, 0.06) - 0.16) < 1e-9);
+assert.equal(stintDrift(trend.slice(0, 7), 0), null);
+await fs.rm(mathsOutput, { force: true });
 const dom = new JSDOM('<div id="root"></div>', {
   url: "http://localhost/",
   pretendToBeVisual: true,
@@ -349,6 +388,39 @@ globalThis.fetch = async (url, options = {}) => {
       ],
     };
   else if (String(url).includes("/ghost-car/compare/")) data = comp;
+  else if (
+    String(url).includes("/weekend/") &&
+    String(url).endsWith("/strategy")
+  )
+    data = {
+      source: "OpenF1 fixture",
+      maxLap: 20,
+      coverage: { observed: 40, screened: 32, tyrePoints: 32 },
+      warnings: [],
+      method: "Observed spans; missing records stay blank",
+      limitations: "Fuel not measured",
+      drivers: ["AAA", "BBB"].map((driver, i) => ({
+        driver,
+        team: "McLaren",
+        finish: i + 1,
+        spans: [{ startLap: 1, endLap: 20, stint: 1, compound: "MEDIUM" }],
+        points: Array.from({ length: 16 }, (_, n) => ({
+          lap: n + 2,
+          age: n + 2,
+          stint: 1,
+          compound: "MEDIUM",
+          seconds: 80 + n * 0.01 + i * 0.2,
+        })),
+      })),
+    };
+  else if (String(url).includes("/weekend/") && String(url).includes("/laps/"))
+    data = {
+      laps: [
+        { lap: 4, seconds: 80, compound: "MEDIUM", age: 4 },
+        { lap: 8, seconds: 79.5, compound: "HARD", age: 2 },
+      ],
+      note: "Screened laps",
+    };
   else if (String(url).includes("/weekend/") && String(url).includes("/pace/"))
     data = {
       pace: { ...paceFixture, session: "Practice 2" },
@@ -362,10 +434,21 @@ globalThis.fetch = async (url, options = {}) => {
       second: "BBB",
       lapTimeA: 80,
       lapTimeB: 81,
+      lapA: String(url).includes("lap_a=4") ? 4 : 8,
+      lapB: 8,
+      observedDurationA: 80,
+      observedDurationB: 81,
+      miniSectors: [
+        { index: 1, start: 0, end: 1, deltaSeconds: -1, winner: "AAA" },
+      ],
+      comparison: [
+        { fraction: 0, speedA: 100, speedB: 99, deltaSeconds: 0 },
+        { fraction: 1, speedA: 150, speedB: 149, deltaSeconds: -1 },
+      ],
       trace: [
-        { x: 0, y: 0 },
-        { x: 100, y: 100 },
-        { x: 200, y: 0 },
+        { x: 0, y: 0, fraction: 0 },
+        { x: 100, y: 100, fraction: 0.5 },
+        { x: 200, y: 0, fraction: 1 },
       ],
       zones: [
         {
@@ -499,19 +582,76 @@ try {
   assert.match(text(), /Fuel mass/);
   assert.match(text(), /Sources: Q: Jolpica/);
   assert.match(text(), /Track demands and conditions/);
+  assert.doesNotMatch(text(), /Team pace · equal weight for both cars/);
+  assert.ok(
+    !calls.some((p) => p.includes("/strategy")),
+    "Strategy is loaded only when opened",
+  );
+  await click("Pace");
   assert.match(text(), /Team pace · equal weight for both cars/);
-  assert.match(text(), /Not indexed — unknown/);
-  assert.match(text(), /Front Wing/);
-  assert.match(text(), /Actual grid/);
   await click("Load practice evidence");
   assert.match(text(), /Practice 2 · observed package pace/);
-  await click("Load corner-speed map");
+  await click("Upgrades");
+  assert.match(text(), /Not indexed — unknown/);
+  assert.match(text(), /Front Wing/);
+  await click("Strategy & tyres");
+  assert.match(text(), /Actual grid/);
+  assert.match(text(), /Raw lap times · no fuel correction applied/);
   assert.ok(
     document.querySelector(
-      'svg[aria-label="Recorded track trace with detected speed zones"]',
+      'svg[aria-label="Observed tyre stints by driver and race lap"]',
     ),
   );
-  assert.match(text(), /Detected speed zones, not official turn numbers/);
+  const assumption = document.querySelector(
+    '.assumption-control input[type="checkbox"]',
+  );
+  await act(async () => assumption.click());
+  assert.match(text(), /Assumption active/);
+  assert.match(text(), /Faint points retain raw times/);
+  await act(async () => assumption.click());
+  assert.match(text(), /Raw lap times · no fuel correction applied/);
+  await click("Laps & track");
+  await act(async () => {
+    const select = document.querySelector('select[aria-label="Lap A"]');
+    select.value = "4";
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+  });
+  await flush();
+  await click("Compare selected laps");
+  assert.ok(calls.some((p) => p.includes("lap_a=4")));
+  assert.ok(
+    document.querySelector(
+      'svg[aria-label="Estimated mini-sector time dominance with detected speed zones"]',
+    ),
+  );
+  assert.match(text(), /AAA L4/);
+  assert.match(text(), /not official timing sectors/);
+  assert.match(text(), /full speed, throttle, brake and gear traces/);
+  // Changing a lap clears the previous comparison rather than mislabelling it.
+  await act(async () => {
+    const select = document.querySelector('select[aria-label="Lap A"]');
+    select.value = "8";
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+  });
+  await flush();
+  assert.equal(
+    document.querySelector(
+      'svg[aria-label="Estimated mini-sector time dominance with detected speed zones"]',
+    ),
+    null,
+  );
+  // The tab strip supports keyboard movement and updates the labelled panel.
+  await act(async () =>
+    document
+      .querySelector('[role="tab"][aria-selected="true"]')
+      .dispatchEvent(
+        new window.KeyboardEvent("keydown", { key: "Home", bubbles: true }),
+      ),
+  );
+  assert.equal(
+    document.querySelector('[role="tab"][aria-selected="true"]').textContent,
+    "Overview",
+  );
   await act(async () => {
     const select = document.querySelector(
       'select[aria-label="Pace conditions"]',

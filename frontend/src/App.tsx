@@ -1,11 +1,12 @@
 import { Navigate, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
+import { lazy } from "react";
 import HomePage from "./pages/HomePage";
-import PredictionPage from "./pages/PredictionPage";
-import GhostCarPage from "./pages/GhostCarPage";
-import BestCarPage from "./pages/BestCarPage";
-import WeekendPage from "./pages/WeekendPage";
-import MotorsportPage from "./pages/MotorsportPage";
+const PredictionPage = lazy(() => import("./pages/PredictionPage"));
+const GhostCarPage = lazy(() => import("./pages/GhostCarPage"));
+const BestCarPage = lazy(() => import("./pages/BestCarPage"));
+const WeekendPage = lazy(() => import("./pages/WeekendPage"));
+const MotorsportPage = lazy(() => import("./pages/MotorsportPage"));
 export default function App() {
   return (
     <Routes>

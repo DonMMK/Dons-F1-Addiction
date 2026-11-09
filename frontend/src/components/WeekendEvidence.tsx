@@ -20,6 +20,8 @@ import type {
 } from "../weekendTypes";
 import { useApi } from "../hooks/useApi";
 import DataState from "./DataState";
+import StrategyTyres from "./StrategyTyres";
+import { Link } from "react-router-dom";
 
 const value = (v: number | null | undefined, digits = 3) =>
   v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(digits)}`;
@@ -283,13 +285,36 @@ function SpeedZones({ data }: { data: TrackEvidence }) {
   return (
     <>
       <p>
-        Source: {data.source} · {data.first} {data.lapTimeA.toFixed(3)}s /{" "}
-        {data.second} {data.lapTimeB.toFixed(3)}s
+        Source: {data.source} · {data.first} L{data.lapA ?? "?"}{" "}
+        {data.lapTimeA.toFixed(3)}s / {data.second} L{data.lapB ?? "?"}{" "}
+        {data.lapTimeB.toFixed(3)}s
+      </p>
+      <div className="chart-legend">
+        <span>
+          <i style={{ background: "#59d6cd" }} />
+          {data.first} gains time
+        </span>
+        <span>
+          <i style={{ background: "#ffbd70" }} />
+          {data.second} gains time
+        </span>
+        <span>
+          <i style={{ background: "#718097" }} />
+          Within ±0.020 s per bin
+        </span>
+      </div>
+      <p className="notice">
+        Classified lap-time A−B: {value(data.lapTimeA - data.lapTimeB)} s.
+        Telemetry spans {data.observedDurationA.toFixed(3)} /{" "}
+        {data.observedDurationB.toFixed(3)} s; sampled-span A−B:{" "}
+        {value(data.observedDurationA - data.observedDurationB)} s. Boundary
+        coverage differs: use the classified lap times for the overall order,
+        and the map to inspect approximate gains within the sampled spans.
       </p>
       <svg
         viewBox="0 0 950 430"
         role="img"
-        aria-label="Recorded track trace with detected speed zones"
+        aria-label="Estimated mini-sector time dominance with detected speed zones"
         style={{ width: "100%", maxHeight: 430 }}
       >
         <polyline
@@ -298,6 +323,40 @@ function SpeedZones({ data }: { data: TrackEvidence }) {
           stroke="#718097"
           strokeWidth="9"
         />
+        {data.trace.slice(1).map((p, i) => {
+          const previous = data.trace[i];
+          const bin = data.miniSectors?.find(
+            (s) =>
+              (p.fraction + previous.fraction) / 2 >= s.start &&
+              (p.fraction + previous.fraction) / 2 <= s.end,
+          );
+          const [x1, y1] = xy(previous.x, previous.y),
+            [x2, y2] = xy(p.x, p.y);
+          return (
+            <line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={
+                bin?.winner === data.first
+                  ? "#59d6cd"
+                  : bin?.winner === data.second
+                    ? "#ffbd70"
+                    : "#718097"
+              }
+              strokeWidth="9"
+              strokeLinecap="round"
+            >
+              <title>
+                {bin
+                  ? `Estimated mini-sector ${bin.index}: ${value(bin.deltaSeconds)} s (${data.first} − ${data.second})`
+                  : "Unknown bin"}
+              </title>
+            </line>
+          );
+        })}
         {data.zones.map((z) => {
           const [x, y] = xy(z.x, z.y);
           return (
@@ -324,9 +383,77 @@ function SpeedZones({ data }: { data: TrackEvidence }) {
         })}
       </svg>
       <p className="notice">
-        Detected speed zones, not official turn numbers. Higher corner minimum
-        speed alone does not establish a faster lap or a better car.
+        Colours compare elapsed time in estimated mini-sectors, not official
+        timing sectors. Detected speed zones are not official turn numbers.
+        Higher corner minimum speed alone does not establish a faster lap or a
+        better car.
       </p>
+      {!!data.comparison?.length && (
+        <div className="grid-2">
+          <div>
+            <h3>Speed around the lap</h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={data.comparison}>
+                <CartesianGrid stroke="#303a48" />
+                <XAxis
+                  dataKey="fraction"
+                  type="number"
+                  tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                />
+                <YAxis domain={["auto", "auto"]} unit=" km/h" width={70} />
+                <Tooltip
+                  contentStyle={{ background: "#17212e" }}
+                  labelFormatter={(v) =>
+                    `${(Number(v) * 100).toFixed(1)}% lap distance`
+                  }
+                />
+                <Line
+                  dataKey="speedA"
+                  name={data.first}
+                  stroke="#59d6cd"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="speedB"
+                  name={data.second}
+                  stroke="#ffbd70"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <h3>Elapsed-time difference · A−B</h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={data.comparison}>
+                <CartesianGrid stroke="#303a48" />
+                <XAxis
+                  dataKey="fraction"
+                  type="number"
+                  tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                />
+                <YAxis unit=" s" />
+                <ReferenceLine y={0} stroke="#718097" />
+                <Tooltip
+                  contentStyle={{ background: "#17212e" }}
+                  labelFormatter={(v) =>
+                    `${(Number(v) * 100).toFixed(1)}% lap distance`
+                  }
+                />
+                <Line
+                  dataKey="deltaSeconds"
+                  name={`${data.first} − ${data.second} (s)`}
+                  stroke="#b2a1ff"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
       {!data.zones.length ? (
         <p className="notice">
           No robust speed minima were detected in these samples.
@@ -379,12 +506,41 @@ export default function WeekendEvidence({
   round: string;
   condition: string;
 }) {
+  const tabs = [
+    "Overview",
+    "Pace",
+    "Strategy & tyres",
+    "Laps & track",
+    "Upgrades",
+  ];
+  const [tab, setTab] = useState("Overview");
   const [practice, setPractice] = useState("FP2"),
     [practicePath, setPracticePath] = useState<string | null>(null);
   const [first, setFirst] = useState(""),
     [second, setSecond] = useState(""),
     [trackSession, setTrackSession] = useState("Q"),
     [trackPath, setTrackPath] = useState<string | null>(null);
+  const [lapA, setLapA] = useState(""),
+    [lapB, setLapB] = useState("");
+  type Options = {
+    laps: {
+      lap: number;
+      seconds: number;
+      compound: string | null;
+      age: number | null;
+    }[];
+    note: string;
+  };
+  const optionsA = useApi<Options>(
+    tab === "Laps & track" && first
+      ? `/weekend/${year}/${round}/laps/${trackSession}/${first}`
+      : null,
+  );
+  const optionsB = useApi<Options>(
+    tab === "Laps & track" && second
+      ? `/weekend/${year}/${round}/laps/${trackSession}/${second}`
+      : null,
+  );
   const drivers = data.drivers;
   const practiceData = useApi<{
     pace: PaceReport;
@@ -401,295 +557,444 @@ export default function WeekendEvidence({
     setTrackPath(null);
   }, [year, round, condition]);
   useEffect(() => setPracticePath(null), [practice]);
-  useEffect(() => setTrackPath(null), [trackSession, first, second]);
+  useEffect(() => {
+    setLapA("");
+    setLapB("");
+  }, [trackSession, first, second]);
+  useEffect(
+    () => setTrackPath(null),
+    [trackSession, first, second, lapA, lapB],
+  );
   return (
     <>
-      <section className="visual-panel">
-        <h2>Race result and pace evidence</h2>
-        <p className="notice">{data.verdict}</p>
-        <p>
-          Use the condition-specific pace estimates, both cars' coverage and
-          uncertainty before assessing a “fastest car” claim. A lower finish can
-          coexist with faster observed pace; the execution records below provide
-          context without assigning a luck or driver-craft score.
-        </p>
-      </section>
-      <section className="visual-panel">
-        <h2>Track demands and conditions</h2>
-        <h3>{data.track.name}</h3>
-        {data.track.demands.map((d) => (
-          <p key={d.area}>
-            <strong>{d.area}</strong> · {d.interpretation}
-          </p>
-        ))}
-        {data.track.tyreAllocation && (
-          <p>
-            Published tyre allocation:{" "}
-            {Object.entries(data.track.tyreAllocation)
-              .map(([c, spec]) => `${c} ${spec}`)
-              .join(" · ")}
-          </p>
-        )}
-        <p>{data.track.note}</p>
-        {data.track.sources.map((s) => (
-          <p key={s.url}>
-            <a href={s.url} target="_blank" rel="noreferrer">
-              {s.label}
-            </a>
-          </p>
-        ))}
-        {data.upgrades.documents
-          ?.filter((d) => /pirelli|circuit map/i.test(d.title))
-          .map((d) => (
-            <p key={d.url}>
-              <a href={d.url} target="_blank" rel="noreferrer">
-                {d.title}
-              </a>
-            </p>
-          ))}
-        <h3>Recorded session weather · {data.conditions.samples} samples</h3>
-        {!!data.conditions.timeline.length ? (
-          <>
-            <p>
-              Track temperature min / median / max:{" "}
-              {Object.values(data.conditions.summary.TrackTemp)
-                .map((v) => (v == null ? "—" : `${v.toFixed(1)}°C`))
-                .join(" / ")}
-            </p>
-            <ResponsiveContainer width="100%" height={240}>
-              <LineChart
-                data={data.conditions.timeline.map((w) => ({
-                  ...w,
-                  time: Date.parse(w.date),
-                }))}
-              >
-                <CartesianGrid stroke="#363649" />
-                <XAxis
-                  dataKey="time"
-                  type="number"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={(v) =>
-                    new Date(v).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  }
-                />
-                <YAxis />
-                <Tooltip
-                  labelFormatter={(v) => new Date(Number(v)).toLocaleString()}
-                  contentStyle={{ background: "#242433" }}
-                />
-                <Line
-                  dataKey="trackTemp"
-                  name="Track °C"
-                  stroke="#ffc464"
-                  dot={false}
-                  isAnimationActive={false}
-                />
-                <Line
-                  dataKey="airTemp"
-                  name="Air °C"
-                  stroke="#59c8bd"
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-            <p>
-              Rain reported in{" "}
-              {
-                data.conditions.timeline.filter((w) => w.rainReported === true)
-                  .length
-              }{" "}
-              samples. Weather times use your local time zone.
-            </p>
-          </>
-        ) : (
-          <p className="notice">
-            Weather coverage unavailable. No temperature-conditioned pace
-            verdict is generated.
-          </p>
-        )}
-        <p className="text-gray">{data.conditions.note}</p>
-      </section>
-      {data.pace && <PaceEvidence pace={data.pace} />}
-      <section className="visual-panel">
-        <h2>Practice long-run evidence</h2>
-        <p>
-          Loaded on demand. Unknown fuel and traffic prevent treating practice
-          pace as an isolated car ranking.
-        </p>
-        <select
-          aria-label="Practice session"
-          className="form-select"
-          value={practice}
-          onChange={(e) => setPractice(e.target.value)}
-        >
-          {["FP1", "FP2", "FP3"].map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>{" "}
-        <button
-          className="btn btn--secondary"
-          disabled={practiceData.loading}
-          onClick={() =>
-            setPracticePath(
-              `/weekend/${year}/${round}/pace/${practice}?condition=${condition}`,
-            )
-          }
-        >
-          Load practice evidence
-        </button>
-        <DataState {...practiceData} />
-        {practiceData.data && (
-          <>
-            <p>Source: {practiceData.data.source}</p>
-            {practiceData.data.warnings.map((w) => (
-              <p className="notice" key={w}>
-                {w}
-              </p>
-            ))}
-            <PaceEvidence pace={practiceData.data.pace} />
-          </>
-        )}
-      </section>
-      <section className="visual-panel">
-        <h2>Corner-speed signatures</h2>
-        <p>
-          Compare two recorded laps to inspect slow, medium and fast speed
-          minima. These observations can suggest where a package gains speed;
-          they do not identify aero design, setup or driver contribution.
-        </p>
-        <select
-          aria-label="Track comparison session"
-          className="form-select"
-          value={trackSession}
-          onChange={(e) => setTrackSession(e.target.value)}
-        >
-          {["Q", "R", "FP1", "FP2", "FP3"].map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>{" "}
-        {[
-          { name: "Corner driver A", value: first, set: setFirst },
-          { name: "Corner driver B", value: second, set: setSecond },
-        ].map((c) => (
-          <select
-            key={c.name}
-            aria-label={c.name}
-            className="form-select"
-            value={c.value}
-            onChange={(e) => c.set(e.target.value)}
-          >
-            {drivers.map((d) => (
-              <option key={d}>{d}</option>
-            ))}
-          </select>
-        ))}{" "}
-        <button
-          className="btn btn--secondary"
-          disabled={!first || !second || first === second || trackData.loading}
-          onClick={() =>
-            setTrackPath(
-              `/weekend/${year}/${round}/track/${trackSession}/${first}/${second}`,
-            )
-          }
-        >
-          Load corner-speed map
-        </button>
-        <DataState {...trackData} />
-        {trackData.data && <SpeedZones data={trackData.data} />}
-      </section>
-      <section className="visual-panel">
-        <h2>Declared upgrades · this weekend</h2>
-        <p>{data.upgrades.note}</p>
-        <p>
-          <a href={data.upgrades.sourceUrl} target="_blank" rel="noreferrer">
-            Official FIA source
-          </a>
-          {data.upgrades.checkedAt &&
-            ` · Indexed ${new Date(data.upgrades.checkedAt).toLocaleDateString()}`}
-        </p>
-        <UpgradeRows teams={data.upgrades.teams} />
-        <details>
-          <summary>Season upgrade timeline · indexed rounds only</summary>
-          {data.upgrades.timeline.map((r) => (
-            <div key={r.round}>
-              <h3>
-                Round {r.round} · {r.eventName}
-              </h3>
-              <p>
-                <a href={r.sourceUrl} target="_blank" rel="noreferrer">
-                  FIA declaration
-                </a>
-              </p>
-              <UpgradeRows teams={r.teams} />
-            </div>
-          ))}
-          {!data.upgrades.timeline.length && (
-            <p>
-              No declarations have been indexed for this season yet. Missing
-              records do not mean no upgrades.
-            </p>
-          )}
-        </details>
-      </section>
-      <section className="visual-panel">
-        <h2>Execution, incidents and classification</h2>
-        <p>{data.execution.note}</p>
-        <div className="table-scroll">
-          <table className="f1-table">
-            <thead>
-              <tr>
-                <th>Driver / team</th>
-                <th>Qualifying</th>
-                <th>Actual grid</th>
-                <th>Finish / status</th>
-                <th>Recorded stops: lap · stationary / lane time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.execution.drivers.map((d) => (
-                <tr key={d.driver}>
-                  <td>
-                    {d.driver} · {d.team}
-                  </td>
-                  <td>{d.qualifying ?? "—"}</td>
-                  <td>{d.grid ?? "—"}</td>
-                  <td>
-                    {d.finish ?? "—"} · {d.status}
-                  </td>
-                  <td>
-                    {d.stops.map((s, i) => (
-                      <div key={i}>
-                        L{s.lap ?? "?"} · {s.stationarySeconds ?? "—"} /{" "}
-                        {s.laneSeconds ?? "—"} s
-                        {s.deltaToSessionMedian != null &&
-                          ` (stationary Δ ${value(s.deltaToSessionMedian)} s vs session median)`}
-                      </div>
-                    ))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="evidence-summary">
+        <div>
+          <span>Matched race samples</span>
+          <strong>{data.pace?.coverage.used ?? "—"}</strong>
+          <small>After weather and traffic checks</small>
         </div>
-        <details>
-          <summary>Race-control event timeline</summary>
-          {data.execution.events.map((e, i) => (
-            <p key={i}>
-              <strong>
-                {e.date
-                  ? new Date(e.date).toLocaleTimeString()
-                  : "Time unavailable"}{" "}
-                · L{e.lap ?? "?"}
-              </strong>{" "}
-              · {e.message}
+        <div>
+          <span>Track temperature</span>
+          <strong>
+            {data.conditions.summary.TrackTemp?.median == null
+              ? "Unknown"
+              : `${data.conditions.summary.TrackTemp.median.toFixed(1)}°C`}
+          </strong>
+          <small>Session median · inspect the timeline</small>
+        </div>
+        <div>
+          <span>Teams declaring updates</span>
+          <strong>
+            {data.upgrades.teams.some((t) =>
+              ["declared_updates", "declared_none"].includes(t.status),
+            )
+              ? data.upgrades.teams.filter(
+                  (t) => t.status === "declared_updates",
+                ).length
+              : "Unknown"}
+          </strong>
+          <small>
+            {
+              data.upgrades.teams.filter((t) =>
+                ["declared_updates", "declared_none"].includes(t.status),
+              ).length
+            }
+            /{data.upgrades.teams.length} teams indexed · missing records
+            unknown
+          </small>
+        </div>
+      </div>
+      <div
+        className="analysis-tabs"
+        role="tablist"
+        aria-label="Weekend analysis views"
+      >
+        {tabs.map((name, i) => (
+          <button
+            key={name}
+            id={`analysis-tab-${i}`}
+            role="tab"
+            aria-selected={tab === name}
+            aria-controls="analysis-panel"
+            tabIndex={tab === name ? 0 : -1}
+            onClick={() => setTab(name)}
+            onKeyDown={(e) => {
+              let next = i;
+              if (e.key === "ArrowRight") next = (i + 1) % tabs.length;
+              else if (e.key === "ArrowLeft")
+                next = (i + tabs.length - 1) % tabs.length;
+              else if (e.key === "Home") next = 0;
+              else if (e.key === "End") next = tabs.length - 1;
+              else return;
+              e.preventDefault();
+              setTab(tabs[next]);
+              document.getElementById(`analysis-tab-${next}`)?.focus();
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+      <div
+        role="tabpanel"
+        id="analysis-panel"
+        aria-labelledby={`analysis-tab-${tabs.indexOf(tab)}`}
+      >
+        {tab === "Overview" && (
+          <>
+            <section className="visual-panel">
+              <h2>Race result and pace evidence</h2>
+              <p className="notice">{data.verdict}</p>
+              <p>
+                Use the condition-specific pace estimates, both cars' coverage
+                and uncertainty before assessing a “fastest car” claim. A lower
+                finish can coexist with faster observed pace; the execution
+                records below provide context without assigning a luck or
+                driver-craft score.
+              </p>
+            </section>
+            <section className="visual-panel">
+              <h2>Track demands and conditions</h2>
+              <h3>{data.track.name}</h3>
+              {data.track.demands.map((d) => (
+                <p key={d.area}>
+                  <strong>{d.area}</strong> · {d.interpretation}
+                </p>
+              ))}
+              {data.track.tyreAllocation && (
+                <p>
+                  Published tyre allocation:{" "}
+                  {Object.entries(data.track.tyreAllocation)
+                    .map(([c, spec]) => `${c} ${spec}`)
+                    .join(" · ")}
+                </p>
+              )}
+              <p>{data.track.note}</p>
+              {data.track.sources.map((s) => (
+                <p key={s.url}>
+                  <a href={s.url} target="_blank" rel="noreferrer">
+                    {s.label}
+                  </a>
+                </p>
+              ))}
+              {data.upgrades.documents
+                ?.filter((d) => /pirelli|circuit map/i.test(d.title))
+                .map((d) => (
+                  <p key={d.url}>
+                    <a href={d.url} target="_blank" rel="noreferrer">
+                      {d.title}
+                    </a>
+                  </p>
+                ))}
+              <h3>
+                Recorded session weather · {data.conditions.samples} samples
+              </h3>
+              {!!data.conditions.timeline.length ? (
+                <>
+                  <p>
+                    Track temperature min / median / max:{" "}
+                    {Object.values(data.conditions.summary.TrackTemp)
+                      .map((v) => (v == null ? "—" : `${v.toFixed(1)}°C`))
+                      .join(" / ")}
+                  </p>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <LineChart
+                      data={data.conditions.timeline.map((w) => ({
+                        ...w,
+                        time: Date.parse(w.date),
+                      }))}
+                    >
+                      <CartesianGrid stroke="#363649" />
+                      <XAxis
+                        dataKey="time"
+                        type="number"
+                        domain={["dataMin", "dataMax"]}
+                        tickFormatter={(v) =>
+                          new Date(v).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        }
+                      />
+                      <YAxis />
+                      <Tooltip
+                        labelFormatter={(v) =>
+                          new Date(Number(v)).toLocaleString()
+                        }
+                        contentStyle={{ background: "#242433" }}
+                      />
+                      <Line
+                        dataKey="trackTemp"
+                        name="Track °C"
+                        stroke="#ffc464"
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        dataKey="airTemp"
+                        name="Air °C"
+                        stroke="#59c8bd"
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <p>
+                    Rain reported in{" "}
+                    {
+                      data.conditions.timeline.filter(
+                        (w) => w.rainReported === true,
+                      ).length
+                    }{" "}
+                    samples. Weather times use your local time zone.
+                  </p>
+                </>
+              ) : (
+                <p className="notice">
+                  Weather coverage unavailable. No temperature-conditioned pace
+                  verdict is generated.
+                </p>
+              )}
+              <p className="text-gray">{data.conditions.note}</p>
+            </section>
+          </>
+        )}
+        {tab === "Pace" && (
+          <>
+            {data.pace ? (
+              <PaceEvidence pace={data.pace} />
+            ) : (
+              <p className="notice">No race pace estimate is available yet.</p>
+            )}
+            <section className="visual-panel">
+              <h2>Practice long-run evidence</h2>
+              <p>
+                Loaded on demand. Unknown fuel and traffic prevent treating
+                practice pace as an isolated car ranking.
+              </p>
+              <select
+                aria-label="Practice session"
+                className="form-select"
+                value={practice}
+                onChange={(e) => setPractice(e.target.value)}
+              >
+                {["FP1", "FP2", "FP3"].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>{" "}
+              <button
+                className="btn btn--secondary"
+                disabled={practiceData.loading}
+                onClick={() =>
+                  setPracticePath(
+                    `/weekend/${year}/${round}/pace/${practice}?condition=${condition}`,
+                  )
+                }
+              >
+                Load practice evidence
+              </button>
+              <DataState {...practiceData} />
+              {practiceData.data && (
+                <>
+                  <p>Source: {practiceData.data.source}</p>
+                  {practiceData.data.warnings.map((w) => (
+                    <p className="notice" key={w}>
+                      {w}
+                    </p>
+                  ))}
+                  <PaceEvidence pace={practiceData.data.pace} />
+                </>
+              )}
+            </section>
+          </>
+        )}
+        {tab === "Laps & track" && (
+          <section className="visual-panel">
+            <p className="eyebrow">WHERE LAP TIME WAS GAINED</p>
+            <h2>Lap comparison and track dominance</h2>
+            <p>
+              Compare two recorded laps to inspect slow, medium and fast speed
+              minima. These observations can suggest where a package gains
+              speed; they do not identify aero design, setup or driver
+              contribution.
             </p>
-          ))}
-        </details>
-      </section>
+            <select
+              aria-label="Track comparison session"
+              className="form-select"
+              value={trackSession}
+              onChange={(e) => setTrackSession(e.target.value)}
+            >
+              {["Q", "R", "FP1", "FP2", "FP3"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>{" "}
+            {[
+              { name: "Corner driver A", value: first, set: setFirst },
+              { name: "Corner driver B", value: second, set: setSecond },
+            ].map((c) => (
+              <select
+                key={c.name}
+                aria-label={c.name}
+                className="form-select"
+                value={c.value}
+                onChange={(e) => c.set(e.target.value)}
+              >
+                {drivers.map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
+              </select>
+            ))}{" "}
+            <div className="analysis-controls">
+              {[
+                { name: "Lap A", value: lapA, set: setLapA, options: optionsA },
+                { name: "Lap B", value: lapB, set: setLapB, options: optionsB },
+              ].map((c) => (
+                <div key={c.name}>
+                  <label>
+                    {c.name}
+                    <select
+                      aria-label={c.name}
+                      className="form-select"
+                      value={c.value}
+                      onChange={(e) => c.set(e.target.value)}
+                    >
+                      <option value="">Fastest screened lap</option>
+                      {c.options.data?.laps.map((l) => (
+                        <option key={l.lap} value={l.lap}>
+                          L{l.lap} · {l.seconds.toFixed(3)}s ·{" "}
+                          {l.compound ?? "unknown tyre"} · age {l.age ?? "?"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <DataState {...c.options} />
+                </div>
+              ))}
+            </div>
+            <button
+              className="btn btn--secondary"
+              disabled={
+                !first || !second || first === second || trackData.loading
+              }
+              onClick={() =>
+                setTrackPath(
+                  `/weekend/${year}/${round}/track/${trackSession}/${first}/${second}?${new URLSearchParams({ ...(lapA ? { lap_a: lapA } : {}), ...(lapB ? { lap_b: lapB } : {}) })}`,
+                )
+              }
+            >
+              Compare selected laps
+            </button>
+            <DataState {...trackData} />
+            {trackData.data && <SpeedZones data={trackData.data} />}
+            <p className="text-gray">
+              <Link to="/ghost-car">
+                Open the animated Ghost Car replay and full speed, throttle,
+                brake and gear traces →
+              </Link>
+            </p>
+          </section>
+        )}
+        {tab === "Upgrades" && (
+          <section className="visual-panel">
+            <h2>Declared upgrades · this weekend</h2>
+            <p>{data.upgrades.note}</p>
+            <p>
+              <a
+                href={data.upgrades.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Official FIA source
+              </a>
+              {data.upgrades.checkedAt &&
+                ` · Indexed ${new Date(data.upgrades.checkedAt).toLocaleDateString()}`}
+            </p>
+            <UpgradeRows teams={data.upgrades.teams} />
+            <details>
+              <summary>Season upgrade timeline · indexed rounds only</summary>
+              {data.upgrades.timeline.map((r) => (
+                <div key={r.round}>
+                  <h3>
+                    Round {r.round} · {r.eventName}
+                  </h3>
+                  <p>
+                    <a href={r.sourceUrl} target="_blank" rel="noreferrer">
+                      FIA declaration
+                    </a>
+                  </p>
+                  <UpgradeRows teams={r.teams} />
+                </div>
+              ))}
+              {!data.upgrades.timeline.length && (
+                <p>
+                  No declarations have been indexed for this season yet. Missing
+                  records do not mean no upgrades.
+                </p>
+              )}
+            </details>
+          </section>
+        )}
+        {tab === "Strategy & tyres" && (
+          <>
+            <StrategyTyres year={year} round={round} />
+            <section className="visual-panel">
+              <h2>Execution, incidents and classification</h2>
+              <p>{data.execution.note}</p>
+              <div className="table-scroll">
+                <table className="f1-table">
+                  <thead>
+                    <tr>
+                      <th>Driver / team</th>
+                      <th>Qualifying</th>
+                      <th>Actual grid</th>
+                      <th>Finish / status</th>
+                      <th>Recorded stops: lap · stationary / lane time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.execution.drivers.map((d) => (
+                      <tr key={d.driver}>
+                        <td>
+                          {d.driver} · {d.team}
+                        </td>
+                        <td>{d.qualifying ?? "—"}</td>
+                        <td>{d.grid ?? "—"}</td>
+                        <td>
+                          {d.finish ?? "—"} · {d.status}
+                        </td>
+                        <td>
+                          {d.stops.map((s, i) => (
+                            <div key={i}>
+                              L{s.lap ?? "?"} · {s.stationarySeconds ?? "—"} /{" "}
+                              {s.laneSeconds ?? "—"} s
+                              {s.deltaToSessionMedian != null &&
+                                ` (stationary Δ ${value(s.deltaToSessionMedian)} s vs session median)`}
+                            </div>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <details>
+                <summary>Race-control event timeline</summary>
+                {data.execution.events.map((e, i) => (
+                  <p key={i}>
+                    <strong>
+                      {e.date
+                        ? new Date(e.date).toLocaleTimeString()
+                        : "Time unavailable"}{" "}
+                      · L{e.lap ?? "?"}
+                    </strong>{" "}
+                    · {e.message}
+                  </p>
+                ))}
+              </details>
+            </section>
+          </>
+        )}
+      </div>
     </>
   );
 }

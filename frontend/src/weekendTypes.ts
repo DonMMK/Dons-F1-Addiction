@@ -119,7 +119,24 @@ export interface TrackEvidence {
   second: string;
   lapTimeA: number;
   lapTimeB: number;
-  trace: { x: number; y: number }[];
+  lapA: number | null;
+  lapB: number | null;
+  observedDurationA: number;
+  observedDurationB: number;
+  trace: { x: number; y: number; fraction: number }[];
+  miniSectors: {
+    index: number;
+    start: number;
+    end: number;
+    deltaSeconds: number;
+    winner: string | null;
+  }[];
+  comparison: {
+    fraction: number;
+    speedA: number;
+    speedB: number;
+    deltaSeconds: number;
+  }[];
   zones: {
     zone: number;
     fraction: number;

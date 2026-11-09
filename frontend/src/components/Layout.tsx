@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from "react-router-dom";
+import { Suspense } from "react";
 const links = [
   ["/", "Overview"],
   ["/weekend", "Weekend by Weekend"],
@@ -33,13 +34,22 @@ export default function Layout() {
       </nav>
       <main className="page">
         <div className="container">
-          <Outlet />
+          <Suspense
+            fallback={
+              <p role="status" className="notice">
+                Loading analysis…
+              </p>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
       </main>
       <footer className="footer">
         <div className="container">
-          FastF1 · Jolpica-F1 · Linked calendar publishers · Built by Don · Not
-          affiliated with Formula 1
+          OpenF1 · FastF1 · Jolpica-F1 · FIA documents · Linked calendar
+          publishers · Free to explore · Built by Don · Not affiliated with
+          Formula 1
         </div>
       </footer>
     </>

@@ -53,26 +53,60 @@ export default function HomePage() {
           Refresh data
         </button>
       </div>
-      <section className="next-session">
-        <p className="eyebrow">NEXT F1 SESSION · {zone}</p>
-        {next ? (
-          <>
-            <h2>{next.title}</h2>
-            <p>{formatEvent(next, zone)}</p>
-            <strong className="countdown">
-              {Math.floor(remaining / 86400)}d{" "}
-              {Math.floor(remaining / 3600) % 24}h{" "}
-              {Math.floor(remaining / 60) % 60}m {remaining % 60}s
-            </strong>
-          </>
-        ) : (
-          <p>
-            {calendar.loading
-              ? "Checking the schedule…"
-              : `No later published session in ${year}. Select next season when its schedule is released.`}
+      <div className="home-hero">
+        <section className="next-session">
+          <p className="eyebrow">NEXT F1 SESSION · {zone}</p>
+          {next ? (
+            <>
+              <h2>{next.title}</h2>
+              <p>{formatEvent(next, zone)}</p>
+              <strong className="countdown">
+                {Math.floor(remaining / 86400)}d{" "}
+                {Math.floor(remaining / 3600) % 24}h{" "}
+                {Math.floor(remaining / 60) % 60}m {remaining % 60}s
+              </strong>
+            </>
+          ) : (
+            <p>
+              {calendar.loading
+                ? "Checking the schedule…"
+                : `No later published session in ${year}. Select next season when its schedule is released.`}
+            </p>
+          )}
+        </section>
+        <aside className="home-workbench" aria-label="Explore the data">
+          <p className="eyebrow">YOUR RACE WEEKEND WORKBENCH</p>
+          <h2>Go from the result to the evidence.</h2>
+          <p className="text-gray">
+            Explore the laps, check the assumptions and compare the whole
+            weekend.
           </p>
-        )}
-      </section>
+          <Link to="/weekend">
+            <span>
+              <strong>Analyse a weekend</strong>
+              <small>Pace · strategy · tyres · upgrades</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link to="/prediction">
+            <span>
+              <strong>Race Predictor</strong>
+              <small>Saved forecasts and post-race scoring</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link to="/ghost-car">
+            <span>
+              <strong>Replay the lap</strong>
+              <small>Animated cars and recorded telemetry</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <span className="evidence-badge">
+            Free to explore · no account required
+          </span>
+        </aside>
+      </div>
       <DataState {...standings} />
       {standings.data && (
         <>

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from ..services.weekend import weekend
 from typing import Literal
 from ..services.data import load_session
 from ..services.pace_evidence import analyse
-from ..services.track_evidence import speed_map
+from ..services.track_evidence import speed_map, lap_options
+from ..services.strategy_evidence import load_strategy
 
 router = APIRouter()
 
@@ -49,5 +50,22 @@ def track_comparison(
     session_type: Literal["Q", "R", "FP1", "FP2", "FP3"],
     first: str,
     second: str,
+    lap_a: int | None = Query(default=None, ge=1),
+    lap_b: int | None = Query(default=None, ge=1),
 ):
-    return speed_map(year, round_number, session_type, first, second)
+    return speed_map(year, round_number, session_type, first, second, lap_a, lap_b)
+
+
+@router.get("/{year}/{round_number}/laps/{session_type}/{driver}")
+def comparison_laps(
+    year: int,
+    round_number: int,
+    session_type: Literal["Q", "R", "FP1", "FP2", "FP3"],
+    driver: str,
+):
+    return lap_options(year, round_number, session_type, driver)
+
+
+@router.get("/{year}/{round_number}/strategy")
+def strategy(year: int, round_number: int):
+    return load_strategy(year, round_number)
