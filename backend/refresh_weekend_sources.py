@@ -32,10 +32,12 @@ def main():
                     {
                         "round": rd,
                         "teamsIndexed": len(result["teams"]),
-                        "status": "saved",
+                        "status": result["submissionStatus"],
                     }
                 )
             )
+            if result["submissionStatus"] != "indexed":
+                failed += 1
         except Exception as exc:
             failed += 1
             print(

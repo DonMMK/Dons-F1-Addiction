@@ -79,7 +79,17 @@ export interface WeekendEvidence {
     tyreAllocation?: Record<string, string>;
   };
   upgrades: {
-    documents?: { title: string; url: string }[];
+    documents?: { title: string; url: string; published?: string | null }[];
+    refresh?: {
+      enabled: boolean;
+      state: string;
+      scope: string;
+      cached: boolean;
+      checkedAt: string | null;
+      lastSuccessAt: string | null;
+      nextCheckAt: string | null;
+      message: string | null;
+    };
     status: string;
     checkedAt: string | null;
     sourceUrl: string;

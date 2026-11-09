@@ -4,6 +4,8 @@ FastAPI server wrapping existing F1 analysis tools.
 """
 
 import os
+from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,12 +19,27 @@ from .routers import (
     weekend,
     calendar,
     engineering,
+    documents,
 )
+
+
+@asynccontextmanager
+async def lifespan(app):
+    from .services.fia_documents import get_indexer
+
+    indexer = get_indexer()
+    indexer.start()
+    try:
+        yield
+    finally:
+        await asyncio.to_thread(indexer.stop)
+
 
 app = FastAPI(
     title="Don's F1 Addiction API",
     description="Formula 1 data analysis, prediction, and telemetry comparison API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS for React frontend
@@ -51,6 +68,7 @@ app.include_router(engineering.router, prefix="/api/engineering", tags=["Enginee
 
 
 app.include_router(data_status.router, prefix="/api/data", tags=["Data access"])
+app.include_router(documents.router, prefix="/api/documents", tags=["FIA documents"])
 
 
 @app.get("/api/health")

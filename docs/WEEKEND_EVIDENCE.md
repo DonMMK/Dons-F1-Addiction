@@ -109,15 +109,18 @@ document hash. Component names record a declaration, not proof of race fitment
 or a measured lap-time benefit. PU replacements are not conflated with declared
 aerodynamic/performance component updates. No gains are assigned from counts.
 
-To refresh an event or backfill completed rounds using public FIA documents:
+The backend now discovers eligible weekends and refreshes FIA evidence in the
+background at startup and while running. Open the Upgrades tab to see cached
+evidence, publication/check status and newly discovered documents. See
+[automatic discovery](AUTOMATIC_FIA_DOCUMENTS.md). These commands remain optional
+diagnostic/manual backfill tools:
 
 ```bash
 python -m backend.refresh_weekend_sources --year 2026 --round 20
 python -m backend.refresh_weekend_sources --year 2026
 ```
 
-This is an explicit ingestion task, not an unauthenticated public write endpoint.
-It discovers the season identifier from the FIA index, checks PDF year/event
+The worker and optional CLI discover season/event values from the FIA index, check PDF year/event
 headers and parses the supported declaration table layout. Missing or changed
 layouts stay unknown/unparsed. It does not guess counts. Downloads are restricted
 to FIA HTTPS paths, bounded in size and checked at every redirect.
@@ -144,7 +147,9 @@ ranking, not an invented substitute. No F1TV login is required for public histor
 
 The interval endpoint adds one cached bulk request per race. Initial cold loads
 can take over a minute. Keep one worker as documented for the current in-process
-jobs. New analysis endpoints are read-only and source refresh is a CLI task.
+jobs. FIA discovery has its own background worker, shared SQLite work leases,
+persistent retries and an HTTP cache. API requests only enqueue work/read cached
+status; PDF parsing does not block the timing request.
 
 ## Verification
 

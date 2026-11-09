@@ -292,6 +292,13 @@ const evidenceFixture = {
   },
 };
 let failure = null;
+let documentsReady = false;
+let pollDocuments;
+const nativeSetInterval = globalThis.setInterval;
+globalThis.setInterval = (callback, delay, ...args) => {
+  if (delay === 30000) pollDocuments = callback;
+  return nativeSetInterval(callback, delay, ...args);
+};
 globalThis.fetch = async (url, options = {}) => {
   calls.push(String(url));
   if (failure && String(url).includes(failure.match)) {
@@ -388,6 +395,31 @@ globalThis.fetch = async (url, options = {}) => {
       ],
     };
   else if (String(url).includes("/ghost-car/compare/")) data = comp;
+  else if (String(url).startsWith("/api/documents/"))
+    data = {
+      ...evidenceFixture.upgrades,
+      teams: documentsReady
+        ? [
+            {
+              ...upgradeFixture,
+              components: [
+                ...upgradeFixture.components,
+                { ...upgradeFixture.components[0], component: "Runtime Floor" },
+              ],
+            },
+          ]
+        : evidenceFixture.upgrades.teams,
+      refresh: {
+        enabled: true,
+        state: documentsReady ? "indexed" : "not_published",
+        scope: "event",
+        cached: true,
+        checkedAt: "2026-11-09T01:00:00Z",
+        nextCheckAt: "2026-11-09T02:00:00Z",
+        lastSuccessAt: null,
+        message: "Missing means unknown, not zero upgrades",
+      },
+    };
   else if (
     String(url).includes("/weekend/") &&
     String(url).endsWith("/strategy")
@@ -594,6 +626,24 @@ try {
   await click("Upgrades");
   assert.match(text(), /Not indexed — unknown/);
   assert.match(text(), /Front Wing/);
+  assert.match(text(), /Missing means unknown, not zero upgrades/);
+  assert.match(text(), /Next eligible check/);
+  await click("Check cached document status");
+  assert.ok(calls.filter((p) => p.startsWith("/api/documents/")).length >= 2);
+  const timingCallsBefore = calls.filter((p) =>
+    p.includes("/api/weekend/"),
+  ).length;
+  documentsReady = true;
+  assert.equal(typeof pollDocuments, "function");
+  await act(async () => pollDocuments());
+  await flush();
+  assert.match(text(), /Runtime Floor/);
+  assert.match(text(), /Published submissions indexed/);
+  assert.equal(
+    calls.filter((p) => p.includes("/api/weekend/")).length,
+    timingCallsBefore,
+    "Document polling must not reload timing/pace data",
+  );
   await click("Strategy & tyres");
   assert.match(text(), /Actual grid/);
   assert.match(text(), /Raw lap times · no fuel correction applied/);
@@ -758,6 +808,7 @@ try {
     "PASS: six routes; source notices, 425 publication status, retry timing/manual recovery, genuine errors, predictions and replay",
   );
 } finally {
+  globalThis.setInterval = nativeSetInterval;
   if (appRoot) await act(async () => appRoot.unmount());
   dom.window.close();
   await fs.rm(output, { force: true });

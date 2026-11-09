@@ -307,7 +307,7 @@ def weekend(year, round_number, condition="slick"):
         "drivers": sorted({d for drivers in roster.values() for d in drivers}),
         "pace": analyse(race, condition) if race is not None else None,
         "conditions": weather_report(source),
-        "track": track_context(str(source.event["EventName"]), year),
+        "track": track_context(str(source.event["EventName"]), year, round_number),
         "upgrades": source_report(
             year, round_number, str(source.event["EventName"]), roster
         ),

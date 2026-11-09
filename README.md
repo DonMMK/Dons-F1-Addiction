@@ -21,6 +21,11 @@ uncertainty and FIA history refresh commands.
 See [the free analysis workbench notes](docs/FREE_INSIGHTS_WORKBENCH.md) for the
 competitor comparison, data sources, new views, fuel assumptions and remaining gaps.
 
+FIA documents now refresh automatically when the backend starts and while it runs.
+Open Upgrades to see publication/check status and discovered official documents.
+No annual PDF list or indexing command is required. See
+[automatic FIA discovery](docs/AUTOMATIC_FIA_DOCUMENTS.md) for behaviour and deployment.
+
 See [the refactor notes](docs/F1_REFACTOR.md) for the original findings, methodology,
 limits, source provenance, model workflow and verification details.
 

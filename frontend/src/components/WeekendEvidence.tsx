@@ -15,23 +15,16 @@ import type {
   PaceReport,
   PaceRow,
   TrackEvidence,
-  UpgradeTeam,
   WeekendEvidence as Evidence,
 } from "../weekendTypes";
 import { useApi } from "../hooks/useApi";
 import DataState from "./DataState";
 import StrategyTyres from "./StrategyTyres";
+import FiaDocuments from "./FiaDocuments";
 import { Link } from "react-router-dom";
 
 const value = (v: number | null | undefined, digits = 3) =>
   v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(digits)}`;
-const label = (status: string) =>
-  ({
-    declared_updates: "Declared component changes",
-    declared_none: "No updates submitted",
-    not_indexed: "Not indexed — unknown",
-    unparsed: "Document needs review",
-  })[status] ?? status;
 
 function PaceTable({ rows, title }: { rows: PaceRow[]; title: string }) {
   return (
@@ -232,41 +225,6 @@ export function PaceEvidence({ pace }: { pace: PaceReport }) {
         </p>
       </details>
     </section>
-  );
-}
-
-function UpgradeRows({ teams }: { teams: UpgradeTeam[] }) {
-  return (
-    <div className="table-scroll">
-      <table className="f1-table">
-        <thead>
-          <tr>
-            <th>Team</th>
-            <th>Evidence status</th>
-            <th>Declared components</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teams.map((t) => (
-            <tr key={t.team}>
-              <td>{t.team}</td>
-              <td>{label(t.status)}</td>
-              <td>
-                {t.components.length
-                  ? t.components.map((c) => (
-                      <div key={`${c.component}-${c.page}`}>
-                        <a href={c.sourceUrl} target="_blank" rel="noreferrer">
-                          {c.component} · PDF p{c.page}
-                        </a>
-                      </div>
-                    ))
-                  : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -895,44 +853,7 @@ export default function WeekendEvidence({
           </section>
         )}
         {tab === "Upgrades" && (
-          <section className="visual-panel">
-            <h2>Declared upgrades · this weekend</h2>
-            <p>{data.upgrades.note}</p>
-            <p>
-              <a
-                href={data.upgrades.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Official FIA source
-              </a>
-              {data.upgrades.checkedAt &&
-                ` · Indexed ${new Date(data.upgrades.checkedAt).toLocaleDateString()}`}
-            </p>
-            <UpgradeRows teams={data.upgrades.teams} />
-            <details>
-              <summary>Season upgrade timeline · indexed rounds only</summary>
-              {data.upgrades.timeline.map((r) => (
-                <div key={r.round}>
-                  <h3>
-                    Round {r.round} · {r.eventName}
-                  </h3>
-                  <p>
-                    <a href={r.sourceUrl} target="_blank" rel="noreferrer">
-                      FIA declaration
-                    </a>
-                  </p>
-                  <UpgradeRows teams={r.teams} />
-                </div>
-              ))}
-              {!data.upgrades.timeline.length && (
-                <p>
-                  No declarations have been indexed for this season yet. Missing
-                  records do not mean no upgrades.
-                </p>
-              )}
-            </details>
-          </section>
+          <FiaDocuments year={year} round={round} initial={data.upgrades} />
         )}
         {tab === "Strategy & tyres" && (
           <>
