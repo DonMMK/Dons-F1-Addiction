@@ -48,6 +48,31 @@ def client(cache_dir):
     return OpenF1Client(cache_dir)
 
 
+def add_public_race_observations(session, cache_dir):
+    """Attach public gap/pit observations to a native timing-cache session."""
+    if getattr(session, "data_provider", None) == "openf1" or hasattr(
+        session, "intervals"
+    ):
+        return
+    from fastf1.core import Session
+
+    if not isinstance(session, Session) or session.name != "Race":
+        return
+    session.intervals = pd.DataFrame()
+    try:
+        api = client(str(cache_dir))
+        info = resolve_session(api, pd.Timestamp(session.date).year, session, "R")
+        params = {"session_key": info["session_key"]}
+        session.intervals = pd.DataFrame(api.get("intervals", params))
+        session.pit_data = pd.DataFrame(
+            _optional(api, "pit", params, session.data_warnings) or []
+        )
+    except SessionDataError as exc:
+        session.data_warnings.append(
+            f"Public interval coverage unavailable: {exc.detail}"
+        )
+
+
 def resolve_session(api, year, template, kind):
     if year < 2023:
         raise SessionDataError(
@@ -155,7 +180,7 @@ class HistoricalSession:
             raise ValueError("Driver not in this session")
         return rows.iloc[0]
 
-    def telemetry(self, lap):
+    def telemetry(self, lap, *, speed_only=False):
         start = timestamp(lap["LapStartDate"])
         duration = lap["LapTime"].total_seconds()
         # Never download an entire session's high-frequency data for a replay.
@@ -169,10 +194,10 @@ class HistoricalSession:
         }
         car = self.api.get("car_data", params)
         pos = self.api.get("location", params)
-        return merge_telemetry(car, pos, start, duration)
+        return merge_telemetry(car, pos, start, duration, speed_only=speed_only)
 
 
-def merge_telemetry(car, positions, start, duration):
+def merge_telemetry(car, positions, start, duration, *, speed_only=False):
     def frame(rows, mapping):
         df = pd.DataFrame(rows)
         if df.empty or not {"date", *(key for key in mapping if key != "drs")}.issubset(
@@ -201,19 +226,26 @@ def merge_telemetry(car, positions, start, duration):
 
     a = frame(
         car,
-        {
-            "speed": "Speed",
-            "throttle": "Throttle",
-            "brake": "Brake",
-            "n_gear": "nGear",
-            "drs": "DRS",
-        },
+        (
+            {"speed": "Speed"}
+            if speed_only
+            else {
+                "speed": "Speed",
+                "throttle": "Throttle",
+                "brake": "Brake",
+                "n_gear": "nGear",
+                "drs": "DRS",
+            }
+        ),
     )
     b = frame(positions, {"x": "X", "y": "Y"})
     a = a.loc[a["Date"].between(start, start + pd.Timedelta(seconds=duration))]
     tel = pd.merge_asof(
         a, b, on="Date", direction="nearest", tolerance=pd.Timedelta(seconds=0.5)
-    ).dropna(subset=["Date", "Speed", "Throttle", "Brake", "nGear", "X", "Y"])
+    ).dropna(
+        subset=["Date", "Speed", "X", "Y"]
+        + ([] if speed_only else ["Throttle", "Brake", "nGear"])
+    )
     if len(tel) < max(20, duration * 2) or len(tel) < 0.95 * len(a):
         raise SessionDataError(
             "openf1_telemetry_incomplete",
@@ -230,12 +262,15 @@ def merge_telemetry(car, positions, start, duration):
             60,
         )
     speed = tel["Speed"].to_numpy(dtype=float) / 3.6
-    if (speed < 0).any() or not tel["Throttle"].between(0, 100).all():
+    if (speed < 0).any() or (
+        not speed_only and not tel["Throttle"].between(0, 100).all()
+    ):
         raise SessionDataError(
             "openf1_telemetry_invalid", "OpenF1 returned invalid telemetry values.", 502
         )
     tel = tel.copy()
-    tel["Brake"] = tel["Brake"].gt(0).astype(int)
+    if not speed_only:
+        tel["Brake"] = tel["Brake"].gt(0).astype(int)
     tel["Time"] = pd.to_timedelta(elapsed, unit="s")
     tel["Distance"] = np.r_[
         0, np.cumsum((speed[:-1] + speed[1:]) * 0.5 * np.diff(elapsed))
@@ -396,6 +431,10 @@ def load_session(year, event, kind, cache_dir, template=None):
     warnings = session.data_warnings
     stints = _optional(api, "stints", params, warnings)
     pits = _optional(api, "pit", params, warnings)
+    session.pit_data = pd.DataFrame(pits or [])
+    session.intervals = pd.DataFrame(
+        (_optional(api, "intervals", params, warnings) or []) if kind == "R" else []
+    )
     controls = _optional(api, "race_control", params, warnings)
     controls = control_in_window(
         controls or [], timestamp(info["date_start"]), timestamp(info["date_end"])
@@ -503,5 +542,9 @@ def load_session(year, event, kind, cache_dir, template=None):
             session.weather_data[column] = np.nan
         session.weather_data[column] = pd.to_numeric(
             session.weather_data[column], errors="coerce"
+        )
+    if "date" in session.weather_data:
+        session.weather_data["Date"] = pd.to_datetime(
+            session.weather_data["date"], utc=True, errors="coerce", format="mixed"
         )
     return session

@@ -128,6 +128,130 @@ const comp = {
   },
 };
 const calls = [];
+const paceRow = {
+  name: "McLaren",
+  component: 1,
+  rank: 1,
+  scoreSeconds: -0.2,
+  interval95: [-0.3, -0.1],
+  rankRange95: [1, 2],
+  windows: 18,
+  rivals: 2,
+  drivers: ["AAA", "BBB"],
+  sectors: [-0.1, -0.1, 0],
+  fitRmsSeconds: 0.01,
+};
+const paceFixture = {
+  condition: "slick",
+  session: "Race",
+  status: "observed",
+  coverage: {
+    recorded: 100,
+    qualityScreened: 80,
+    weatherMatched: 70,
+    trafficScreened: 50,
+    used: 50,
+  },
+  teamPace: { rows: [paceRow], components: 1 },
+  driverPace: {
+    rows: [{ ...paceRow, name: "AAA", drivers: ["AAA"] }],
+    components: 1,
+    pairwise: [],
+  },
+  unrankedTeams: ["Ferrari"],
+  method: "Matched evidence fixture",
+  limitations: ["Fuel loads unknown"],
+};
+const upgradeFixture = {
+  team: "McLaren",
+  status: "declared_updates",
+  pages: [2],
+  components: [
+    {
+      component: "Front Wing",
+      page: 2,
+      sourceUrl: "https://www.fia.com/system/files/fixture.pdf",
+      effectSeconds: null,
+      fitment: "Not verified",
+    },
+  ],
+};
+const evidenceFixture = {
+  drivers: ["AAA", "BBB"],
+  verdict: "A race win does not identify the fastest underlying car.",
+  pace: paceFixture,
+  conditions: {
+    samples: 2,
+    summary: { TrackTemp: { min: 25, median: 30, max: 35 } },
+    timeline: [
+      {
+        date: "2026-01-01T10:00:00Z",
+        trackTemp: 25,
+        airTemp: 20,
+        windSpeed: 2,
+        rainReported: false,
+      },
+      {
+        date: "2026-01-01T10:10:00Z",
+        trackTemp: 35,
+        airTemp: 22,
+        windSpeed: 2,
+        rainReported: true,
+      },
+    ],
+    note: "Rainfall does not measure grip",
+  },
+  track: {
+    name: "Reviewed circuit",
+    status: "reviewed_context",
+    demands: [
+      { area: "Fast corners", interpretation: "Compare observed sector pace" },
+    ],
+    sources: [],
+    note: "No team design bonus",
+  },
+  upgrades: {
+    status: "indexed",
+    checkedAt: "2026-01-01T09:00:00Z",
+    sourceUrl: "https://www.fia.com/system/files/fixture.pdf",
+    teams: [
+      upgradeFixture,
+      { team: "Ferrari", status: "not_indexed", pages: [], components: [] },
+    ],
+    timeline: [
+      {
+        round: 1,
+        eventName: "Test GP",
+        checkedAt: "2026-01-01T09:00:00Z",
+        sourceUrl: "https://www.fia.com/system/files/fixture.pdf",
+        teams: [upgradeFixture],
+      },
+    ],
+    note: "Declaration does not establish a lap-time gain",
+  },
+  execution: {
+    drivers: [
+      {
+        driver: "AAA",
+        team: "McLaren",
+        qualifying: 1,
+        grid: 5,
+        finish: 2,
+        status: "Finished",
+        stops: [
+          {
+            lap: 20,
+            stationarySeconds: 3,
+            laneSeconds: 24,
+            deltaToSessionMedian: 0.5,
+          },
+        ],
+      },
+    ],
+    events: [],
+    note: "No luck score",
+  },
+};
 let failure = null;
 globalThis.fetch = async (url, options = {}) => {
   calls.push(String(url));
@@ -136,7 +260,8 @@ globalThis.fetch = async (url, options = {}) => {
     if (failure.code) headers.set("X-F1-Data-Error", failure.code);
     if (failure.retryAfter) headers.set("Retry-After", failure.retryAfter);
     return new Response(JSON.stringify({ detail: failure.detail }), {
-      status: failure.status, headers,
+      status: failure.status,
+      headers,
     });
   }
   let data;
@@ -224,8 +349,43 @@ globalThis.fetch = async (url, options = {}) => {
       ],
     };
   else if (String(url).includes("/ghost-car/compare/")) data = comp;
+  else if (String(url).includes("/weekend/") && String(url).includes("/pace/"))
+    data = {
+      pace: { ...paceFixture, session: "Practice 2" },
+      source: "OpenF1 fixture",
+      warnings: [],
+    };
+  else if (String(url).includes("/weekend/") && String(url).includes("/track/"))
+    data = {
+      source: "OpenF1 fixture",
+      first: "AAA",
+      second: "BBB",
+      lapTimeA: 80,
+      lapTimeB: 81,
+      trace: [
+        { x: 0, y: 0 },
+        { x: 100, y: 100 },
+        { x: 200, y: 0 },
+      ],
+      zones: [
+        {
+          zone: 1,
+          fraction: 0.5,
+          x: 100,
+          y: 100,
+          band: "slow",
+          sector: 2,
+          speedA: 100,
+          speedB: 95,
+          deltaKmH: 5,
+        },
+      ],
+      method: "Detected speed minima, not official turns",
+      limitations: "Approximate position samples",
+    };
   else if (String(url).includes("/weekend/"))
     data = {
+      evidence: evidenceFixture,
       year: current,
       round: 1,
       eventName: "Test GP",
@@ -338,6 +498,29 @@ try {
   assert.match(text(), /Quali\/race reversal/);
   assert.match(text(), /Fuel mass/);
   assert.match(text(), /Sources: Q: Jolpica/);
+  assert.match(text(), /Track demands and conditions/);
+  assert.match(text(), /Team pace · equal weight for both cars/);
+  assert.match(text(), /Not indexed — unknown/);
+  assert.match(text(), /Front Wing/);
+  assert.match(text(), /Actual grid/);
+  await click("Load practice evidence");
+  assert.match(text(), /Practice 2 · observed package pace/);
+  await click("Load corner-speed map");
+  assert.ok(
+    document.querySelector(
+      'svg[aria-label="Recorded track trace with detected speed zones"]',
+    ),
+  );
+  assert.match(text(), /Detected speed zones, not official turn numbers/);
+  await act(async () => {
+    const select = document.querySelector(
+      'select[aria-label="Pace conditions"]',
+    );
+    select.value = "wet";
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+  });
+  await flush();
+  assert.ok(calls.some((p) => p.includes("condition=wet")));
   await navigate("/prediction");
   assert.match(text(), /What changed in v12/);
   await click("Run & save");
@@ -361,19 +544,28 @@ try {
   assert.ok(calls.some((p) => p.includes("/prediction/evaluate/saved-one")));
 
   // Expected publication delays are a calm status, with a manual retry only.
-  failure = { match: "/drivers/", status: 425, code: "session_not_started",
-    retryAfter: "1", detail: "This session has not started yet." };
+  failure = {
+    match: "/drivers/",
+    status: 425,
+    code: "session_not_started",
+    retryAfter: "1",
+    detail: "This session has not started yet.",
+  };
   await navigate("/ghost-car");
   assert.match(text(), /This session hasn't started yet/);
   assert.match(text(), /Choose an earlier completed session/);
   assert.match(text(), /your local time/);
   assert.equal(document.querySelectorAll('[role="alert"]').length, 0);
   assert.ok(document.querySelector('[role="status"]'));
-  const retry = [...document.querySelectorAll("button")].find((b) => b.textContent === "Check again");
+  const retry = [...document.querySelectorAll("button")].find(
+    (b) => b.textContent === "Check again",
+  );
   assert.ok(retry.disabled);
   const driverCalls = () => calls.filter((p) => p.includes("/drivers/")).length;
   const before = driverCalls();
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+  });
   assert.equal(driverCalls(), before, "A pending session must not auto-poll");
   assert.equal(retry.disabled, false);
   failure = null;
@@ -381,22 +573,41 @@ try {
   assert.equal(driverCalls(), before + 1);
   assert.doesNotMatch(text(), /This session hasn't started yet/);
 
-  failure = { match: "/drivers/", status: 425, code: "classification_not_published",
-    retryAfter: new Date(Date.now() + 60_000).toUTCString(), detail: "The session classification has not been published yet." };
+  failure = {
+    match: "/drivers/",
+    status: 425,
+    code: "classification_not_published",
+    retryAfter: new Date(Date.now() + 60_000).toUTCString(),
+    detail: "The session classification has not been published yet.",
+  };
   await navigate("/ghost-car");
   assert.match(text(), /Session results aren't published yet/);
-  assert.ok([...document.querySelectorAll("button")].find((b) => b.textContent === "Check again").disabled);
+  assert.ok(
+    [...document.querySelectorAll("button")].find(
+      (b) => b.textContent === "Check again",
+    ).disabled,
+  );
   failure = null;
   await navigate("/");
   assert.doesNotMatch(text(), /Session results aren't published yet/);
 
-  failure = { match: "/drivers/", status: 502, detail: "Timing provider unavailable" };
+  failure = {
+    match: "/drivers/",
+    status: 502,
+    detail: "Timing provider unavailable",
+  };
   await navigate("/ghost-car");
-  assert.match(document.querySelector('[role="alert"]').textContent, /Timing provider unavailable/);
+  assert.match(
+    document.querySelector('[role="alert"]').textContent,
+    /Timing provider unavailable/,
+  );
   assert.doesNotMatch(text(), /Session data isn't available yet/);
 
-  failure = { match: "/prediction/run", status: 425,
-    detail: "Practice results are still being published." };
+  failure = {
+    match: "/prediction/run",
+    status: 425,
+    detail: "Practice results are still being published.",
+  };
   await navigate("/prediction");
   await click("Run & save");
   assert.match(text(), /Session data isn't available yet/);

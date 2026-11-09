@@ -1,4 +1,5 @@
 const BASE = "/api";
+import type { WeekendEvidence } from "./weekendTypes";
 
 /** Preserve provider status so expected publication delays get a helpful UI. */
 export class ApiError extends Error {
@@ -33,7 +34,9 @@ export async function request<T>(
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new ApiError(
-      typeof body?.detail === "string" ? body.detail : `Request failed: ${res.status}`,
+      typeof body?.detail === "string"
+        ? body.detail
+        : `Request failed: ${res.status}`,
       res.status,
       res.headers?.get("X-F1-Data-Error") ?? null,
       res.headers?.get("Retry-After") ?? null,
@@ -350,6 +353,7 @@ export interface FieldPace {
   relativePacePercent: number | null;
 }
 export interface WeekendResponse {
+  evidence?: WeekendEvidence;
   dataSources?: Record<string, string>;
   fieldPace?: FieldPace[];
   year: number;

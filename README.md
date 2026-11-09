@@ -8,12 +8,15 @@ empirical weekend comparisons, recorded lap replay and auditable race prediction
 | Route | What it does |
 | --- | --- |
 | `/` | Driver / constructor standings, previous-round movement, animated schematic championship order, F1 calendar and next session in the viewer's timezone |
-| `/weekend` | Same-segment qualifying and matched-lap teammate race comparisons, sample counts, exploratory intervals and tyre-age trends |
+| `/weekend` | Track/weather context, condition-filtered package-pace estimates, FIA upgrade history, execution records, corner-speed maps and existing teammate comparisons |
 | `/prediction` | Version descriptions, saved winner distributions, post-race Brier / log-loss scores and trained-iteration validation metrics |
 | `/ghost-car` | Two recorded fastest laps with play / pause / scrub controls and speed, throttle, brake, gear, DRS and cumulative time traces |
 | `/looking-back` | Cited W11 / RB19 / MCL39 engineering context, conceptual car diagrams, signed qualifying advantage and recorded lap comparisons |
 | `/not-just-f1` | Mixed-series calendar: F1, WEC / Hypercar, IMSA, all ten 2026 NLS races, GT Europe and Supercars; browser-local calendar imports |
 | `/best-car` | Redirect to `/looking-back` for existing bookmarks |
+
+See [expanded weekend evidence](docs/WEEKEND_EVIDENCE.md) for sources, matching,
+uncertainty and FIA history refresh commands.
 
 See [the refactor notes](docs/F1_REFACTOR.md) for the original findings, methodology,
 limits, source provenance, model workflow and verification details.

@@ -1,0 +1,167 @@
+{
+  "year": 2026,
+  "round": 2,
+  "eventName": "Chinese Grand Prix",
+  "checkedAt": "2026-11-09T01:52:22.312944+00:00",
+  "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+  "indexUrl": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2026-2072/event/Chinese%20Grand%20Prix",
+  "documentHash": "e113dd8e20a71be5f18ff28e8a94351d2699895e09207294f73cfaecd395840b",
+  "documents": [
+    {
+      "title": "Doc 10 - Car Presentation Submissions Published on 13.03.26 02:00 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf"
+    },
+    {
+      "title": "Doc 7 - Competition Notes - Circuit Map, Pit Lane Drawing, Emergency Exits Map, Battery Containment Area and Red Zone Published on 12.03.26 09:59 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_competition_notes_-_circuit_map_pit_lane_drawing_emergency_exits_map_battery_containment_area_and_red_zone.pdf"
+    },
+    {
+      "title": "Doc 5 - Competition Notes - Pirelli Preview Published on 12.03.26 03:30 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_competition_notes_-_pirelli_preview.pdf"
+    }
+  ],
+  "teams": [
+    {
+      "team": "McLaren",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        2
+      ]
+    },
+    {
+      "team": "Mercedes",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        3
+      ]
+    },
+    {
+      "team": "Red Bull Racing",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        4
+      ]
+    },
+    {
+      "team": "Ferrari",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Halo",
+          "page": 5,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        5
+      ]
+    },
+    {
+      "team": "Williams",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        7
+      ]
+    },
+    {
+      "team": "Racing Bulls",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Corner",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        8
+      ]
+    },
+    {
+      "team": "Aston Martin",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        10
+      ]
+    },
+    {
+      "team": "Haas F1 Team",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Structure",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        11
+      ]
+    },
+    {
+      "team": "Audi",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Nose",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        12
+      ]
+    },
+    {
+      "team": "Alpine",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        14
+      ]
+    },
+    {
+      "team": "Cadillac",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Diffuser",
+          "page": 15,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Mirror Stay",
+          "page": 15,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        15
+      ]
+    }
+  ]
+}

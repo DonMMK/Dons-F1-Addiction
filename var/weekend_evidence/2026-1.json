@@ -1,0 +1,329 @@
+{
+  "year": 2026,
+  "round": 1,
+  "eventName": "Australian Grand Prix",
+  "checkedAt": "2026-11-09T01:52:17.003657+00:00",
+  "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+  "indexUrl": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2026-2072/event/Australian%20Grand%20Prix",
+  "documentHash": "9e9ccc09667faa4f612a32edab64e41b1d7ff914778e5681d96cd4ff81dbb5dd",
+  "documents": [
+    {
+      "title": "Doc 12 - Event Notes - Pirelli Preview V2 Published on 06.03.26 00:47 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_event_notes_-_pirelli_preview_v2.pdf"
+    },
+    {
+      "title": "Doc 9 - Car Presentation Submissions Published on 06.03.26 00:02 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf"
+    },
+    {
+      "title": "Doc 5 - Competition Notes - Circuit Map, Pit Lane Drawing, Emergency Exits Map and Quarantine Zone Published on 05.03.26 07:30 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_competition_notes_-_circuit_map_pit_lane_drawing_emergency_exits_map_and_quarantine_zone.pdf"
+    },
+    {
+      "title": "Doc 3 - Event Notes - Pirelli Preview Published on 05.03.26 00:13 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_event_notes_-_pirelli_preview.pdf"
+    }
+  ],
+  "teams": [
+    {
+      "team": "McLaren",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Floor",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        2
+      ]
+    },
+    {
+      "team": "Mercedes",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Bodywork",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Wing",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        4
+      ]
+    },
+    {
+      "team": "Red Bull Racing",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Nose",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        6
+      ]
+    },
+    {
+      "team": "Ferrari",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body /",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        8
+      ]
+    },
+    {
+      "team": "Williams",
+      "status": "unparsed",
+      "components": [],
+      "pages": [
+        10
+      ]
+    },
+    {
+      "team": "Racing Bulls",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Floor Body",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Cover",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Louvres",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Corner",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        12
+      ]
+    },
+    {
+      "team": "Aston Martin",
+      "status": "unparsed",
+      "components": [],
+      "pages": [
+        14
+      ]
+    },
+    {
+      "team": "Haas F1 Team",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Endplate",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Edge",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        16
+      ]
+    },
+    {
+      "team": "Alpine",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 19,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Cover",
+          "page": 19,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 19,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        19
+      ]
+    },
+    {
+      "team": "Audi",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 21,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Sidepod Inlet",
+          "page": 21,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Sidepod Body",
+          "page": 21,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        21
+      ]
+    },
+    {
+      "team": "Cadillac",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 23,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Endplate",
+          "page": 23,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 23,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        23
+      ]
+    }
+  ]
+}

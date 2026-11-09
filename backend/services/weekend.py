@@ -200,7 +200,7 @@ def field_pace(race, qualifying):
     return result
 
 
-def weekend(year, round_number):
+def weekend(year, round_number, condition="slick"):
     sessions, errors, failures = {}, [], []
     for kind in ("Q", "R"):
         try:
@@ -299,7 +299,23 @@ def weekend(year, round_number):
             for key in ("AirTemp", "TrackTemp", "Humidity", "WindSpeed")
         }
         weather["rainfall"] = bool(wd["Rainfall"].dropna().gt(0).any())
+    from .pace_evidence import analyse, weather_report
+    from .race_context import execution_report
+    from .weekend_sources import report as source_report, track_context
+
+    evidence = {
+        "drivers": sorted({d for drivers in roster.values() for d in drivers}),
+        "pace": analyse(race, condition) if race is not None else None,
+        "conditions": weather_report(source),
+        "track": track_context(str(source.event["EventName"]), year),
+        "upgrades": source_report(
+            year, round_number, str(source.event["EventName"]), roster
+        ),
+        "execution": execution_report(race, quali),
+        "verdict": "A race win does not identify the fastest underlying car. Observed matched pace describes a car-driver package in selected conditions; pure car speed, driver contribution, upgrade gains and bad luck cannot be isolated from these feeds.",
+    }
     return {
+        "evidence": evidence,
         "year": year,
         "round": round_number,
         "eventName": str(source.event["EventName"]),

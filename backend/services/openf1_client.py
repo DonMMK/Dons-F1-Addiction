@@ -29,6 +29,7 @@ ENDPOINTS = {
     "session_result",
     "car_data",
     "location",
+    "intervals",
 }
 
 

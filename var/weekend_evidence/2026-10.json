@@ -1,0 +1,262 @@
+{
+  "year": 2026,
+  "round": 10,
+  "eventName": "Belgian Grand Prix",
+  "checkedAt": "2026-11-09T01:53:05.718688+00:00",
+  "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+  "indexUrl": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2026-2072/event/Belgian%20Grand%20Prix",
+  "documentHash": "e3edc39edb92db8b85e8b9216a75979b0738957acd009d0ed0ab4fb87ecd7264",
+  "documents": [
+    {
+      "title": "Doc 12 - Car Presentation Submissions Published on 17.07.26 12:17 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf"
+    },
+    {
+      "title": "Doc 7 - Competition Notes - Circuit Map, Pit Lane Drawing, Emergency Exits Map and Red Zone Published on 16.07.26 17:50 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_competition_notes_-_circuit_map_pit_lane_drawing_emergency_exits_map_and_red_zone.pdf"
+    },
+    {
+      "title": "Doc 2 - Competition Notes - Pirelli Preview Published on 15.07.26 20:06 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_competition_notes_-_pirelli_preview.pdf"
+    }
+  ],
+  "teams": [
+    {
+      "team": "McLaren",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        2
+      ]
+    },
+    {
+      "team": "Mercedes",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Corner",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        4
+      ]
+    },
+    {
+      "team": "Red Bull Racing",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        6
+      ]
+    },
+    {
+      "team": "Ferrari",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        8
+      ]
+    },
+    {
+      "team": "Williams",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Corner",
+          "page": 9,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 9,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 9,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        9
+      ]
+    },
+    {
+      "team": "Racing Bulls",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Cover",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Roll Hoop",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Corner",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        11
+      ]
+    },
+    {
+      "team": "Aston Martin",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        13
+      ]
+    },
+    {
+      "team": "Haas F1 Team",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Wing",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Corner",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Beam Wing",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        14
+      ]
+    },
+    {
+      "team": "Audi",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Diffuser",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        16
+      ]
+    },
+    {
+      "team": "Alpine",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Halo",
+          "page": 18,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        18
+      ]
+    },
+    {
+      "team": "Cadillac",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 20,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        20
+      ]
+    }
+  ]
+}

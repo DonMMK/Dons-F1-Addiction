@@ -13,6 +13,7 @@ import type { EventInfo, WeekendResponse } from "../api";
 import { useApi } from "../hooks/useApi";
 import SeasonSelect from "../components/SeasonSelect";
 import DataState from "../components/DataState";
+import WeekendEvidence from "../components/WeekendEvidence";
 
 const delta = (value: number | null) =>
   value == null
@@ -23,9 +24,10 @@ export default function WeekendPage() {
   const [round, setRound] = useState("");
   const [selected, setSelected] = useState(0);
   const [refresh, setRefresh] = useState(0);
+  const [condition, setCondition] = useState("slick");
   const schedule = useApi<{ events: EventInfo[] }>(`/schedule/${year}`);
   const report = useApi<WeekendResponse>(
-    round ? `/weekend/${year}/${round}` : null,
+    round ? `/weekend/${year}/${round}?condition=${condition}` : null,
     refresh,
   );
   useEffect(() => {
@@ -40,8 +42,9 @@ export default function WeekendPage() {
         <p className="eyebrow">MEASURE FIRST. EXPLAIN CAREFULLY.</p>
         <h1 className="page__title">Weekend by Weekend: Overview</h1>
         <p className="page__subtitle">
-          Teammate comparisons with qualifying and race pace kept separate. Same
-          team is a useful control, not proof of identical cars or conditions.
+          Track context, conditions, observed package pace, declared upgrades
+          and execution records, alongside teammate comparisons. Car and driver
+          effects are not assumed to be separable.
         </p>
       </div>
       <div className="control-panel control-panel__row">
@@ -79,16 +82,40 @@ export default function WeekendPage() {
         >
           Refresh weekend
         </button>
+        <select
+          aria-label="Pace conditions"
+          className="form-select"
+          value={condition}
+          onChange={(e) => setCondition(e.target.value)}
+        >
+          <option value="slick">Slick-tyre laps</option>
+          <option value="wet">Wet / intermediate tyres</option>
+          <option value="cool">Track below 30°C</option>
+          <option value="warm">Track at least 40°C</option>
+          <option value="all">All matched conditions</option>
+        </select>
       </div>
       <DataState {...schedule} />
       <DataState {...report} />
       {report.data && (
         <>
           <h2>{report.data.eventName}</h2>
+          {report.data.evidence && (
+            <WeekendEvidence
+              key={`${year}-${round}-${condition}`}
+              data={report.data.evidence}
+              year={year}
+              round={round}
+              condition={condition}
+            />
+          )}
+          <h2>Teammate head-to-head</h2>
           {report.data.dataSources && (
             <p className="notice">
-              Sources: {Object.entries(report.data.dataSources)
-                .map(([session, source]) => `${session}: ${source}`).join(" · ")}
+              Sources:{" "}
+              {Object.entries(report.data.dataSources)
+                .map(([session, source]) => `${session}: ${source}`)
+                .join(" · ")}
             </p>
           )}
           <p className="notice">{report.data.method}</p>

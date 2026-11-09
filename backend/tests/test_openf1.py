@@ -76,6 +76,7 @@ def fixture(kind="R"):
         "laps": laps,
         "stints": stints,
         "pit": [],
+        "intervals": [],
         "race_control": controls,
         "weather": [
             dict(
@@ -362,6 +363,16 @@ def telemetry_rows(duration=80):
 
 
 class Replay(unittest.TestCase):
+    def test_speed_map_does_not_depend_on_unrelated_control_channel_validity(self):
+        car, pos = telemetry_rows()
+        for row in car:
+            row["throttle"] = 104
+        tel = openf1.merge_telemetry(car, pos, START, 80, speed_only=True)
+        self.assertEqual(len(tel), 321)
+        self.assertNotIn("Throttle", tel.columns)
+        with self.assertRaises(SessionDataError):
+            openf1.merge_telemetry(car, pos, START, 80)
+
     def test_binary_brake_and_speed_integrated_distance(self):
         car, pos = telemetry_rows()
         tel = openf1.merge_telemetry(car, pos, START, 80)

@@ -24,3 +24,7 @@ requests>=2.31.0,<3
 
 # Explicit version parsing for archive capability checks
 packaging>=23.0
+
+# Public FIA car-presentation document indexing
+beautifulsoup4>=4.12,<5
+pypdf>=5,<7

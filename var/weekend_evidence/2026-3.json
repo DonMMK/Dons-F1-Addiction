@@ -1,0 +1,237 @@
+{
+  "year": 2026,
+  "round": 3,
+  "eventName": "Japanese Grand Prix",
+  "checkedAt": "2026-11-09T01:52:28.119483+00:00",
+  "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+  "indexUrl": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2026-2072/event/Japanese%20Grand%20Prix",
+  "documentHash": "a8fcc30bcae36d21d52c7d3c50dc76c197949b48843653c15ae9d15facaec3a6",
+  "documents": [
+    {
+      "title": "Doc 35 - Competition Notes - Pirelli Preview V2 Published on 27.03.26 23:55 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_competition_notes_-_pirelli_preview_v2.pdf"
+    },
+    {
+      "title": "Doc 11 - Car Presentation Submissions Published on 27.03.26 01:02 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf"
+    },
+    {
+      "title": "Doc 6 - Competition Notes - Circuit Map, Pit Lane Drawing, Emergency Exits Map, Battery Containment Area and Red Zone Published on 26.03.26 07:52 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_competition_notes_-_circuit_map_pit_lane_drawing_emergency_exits_map_battery_containment_area_and_red_zone.pdf"
+    },
+    {
+      "title": "Doc 2 - Competition Notes - Pirelli Preview Published on 25.03.26 08:47 CET",
+      "url": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_competition_notes_-_pirelli_preview.pdf"
+    }
+  ],
+  "teams": [
+    {
+      "team": "McLaren",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        2
+      ]
+    },
+    {
+      "team": "Mercedes",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        3
+      ]
+    },
+    {
+      "team": "Red Bull Racing",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Sidepod Inlet",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Coke/Engine",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Corner",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        4
+      ]
+    },
+    {
+      "team": "Ferrari",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Corner",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        6
+      ]
+    },
+    {
+      "team": "Williams",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Suspension",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        8,
+        9
+      ]
+    },
+    {
+      "team": "Racing Bulls",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        10
+      ]
+    },
+    {
+      "team": "Aston Martin",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Endplate",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 11,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        11
+      ]
+    },
+    {
+      "team": "Haas F1 Team",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 13,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        13
+      ]
+    },
+    {
+      "team": "Audi",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        15
+      ]
+    },
+    {
+      "team": "Alpine",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Corner",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Endplate",
+          "page": 16,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        16
+      ]
+    },
+    {
+      "team": "Cadillac",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Diffuser Fence",
+          "page": 18,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Diffuser",
+          "page": 18,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        18
+      ]
+    }
+  ]
+}

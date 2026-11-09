@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Interlagos / Autódromo José Carlos Pace",
+    "events": [
+      "São Paulo Grand Prix",
+      "Brazilian Grand Prix"
+    ],
+    "validYears": [
+      2026
+    ],
+    "status": "reviewed_context",
+    "tyreAllocation": {
+      "HARD": "C3",
+      "MEDIUM": "C4",
+      "SOFT": "C5"
+    },
+    "demands": [
+      {
+        "area": "Fast corners and long straights",
+        "interpretation": "The published layout description calls for an aerodynamic balance. Compare measured sector and apex-speed differences; straight-line speed alone cannot isolate power or drag."
+      },
+      {
+        "area": "Tyre management over a stint",
+        "interpretation": "Pirelli identifies degradation management as a key race factor. Tyre-age trends, temperature and compound must be compared together; physical tyre wear is not measured."
+      },
+      {
+        "area": "Changing grip and weather",
+        "interpretation": "Pirelli reports resurfacing between turns 3–5 and 8–9 for 2026. Rain and temperature swings can change relative pace; wet and slick samples must not be pooled into a car verdict."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Pirelli — 2026 Interlagos preview, 3 November 2026",
+        "url": "https://press.pirelli.com/pirelli-brings-the-softer-trio-back-to-interlagos/"
+      }
+    ],
+    "note": "Published circuit context is not a team-performance prior. No named team receives a bonus from these descriptions. This profile is scoped to 2026; recorded speed zones are estimates, not official corner classifications."
+  }
+]
