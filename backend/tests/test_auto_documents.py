@@ -331,11 +331,16 @@ class Runtime(unittest.TestCase):
 
     def test_application_lifespan_starts_and_stops_the_worker(self):
         indexer = SimpleNamespace(start=Mock(), stop=Mock())
-        with patch.object(auto, "get_indexer", return_value=indexer):
+        pace = SimpleNamespace(start=Mock(), stop=Mock())
+        with patch.object(auto, "get_indexer", return_value=indexer), patch(
+            "backend.services.performance.get_performance", return_value=pace
+        ):
             with TestClient(app) as client:
                 self.assertEqual(client.get("/api/health").status_code, 200)
                 indexer.start.assert_called_once()
+                pace.start.assert_called_once()
             indexer.stop.assert_called_once()
+            pace.stop.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 import copy
 import json
 import unittest
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -227,7 +228,10 @@ class Sources(unittest.TestCase):
         self.assertTrue(all(c["effectSeconds"] is None for c in mclaren["components"]))
 
     def test_missing_round_is_unknown_and_track_context_is_year_scoped(self):
-        result = sources.report(2026, 1, "Australian Grand Prix", ["McLaren"])
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            sources, "DATA_DIR", Path(directory)
+        ):
+            result = sources.report(2026, 1, "Australian Grand Prix", ["McLaren"])
         self.assertEqual(result["teams"][0]["status"], "not_indexed")
         self.assertEqual(result["timeline"], [])
         self.assertEqual(

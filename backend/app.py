@@ -20,19 +20,24 @@ from .routers import (
     calendar,
     engineering,
     documents,
+    performance,
 )
 
 
 @asynccontextmanager
 async def lifespan(app):
     from .services.fia_documents import get_indexer
+    from .services.performance import get_performance
 
     indexer = get_indexer()
     indexer.start()
+    pace_cache = get_performance()
+    pace_cache.start()
     try:
         yield
     finally:
         await asyncio.to_thread(indexer.stop)
+        await asyncio.to_thread(pace_cache.stop)
 
 
 app = FastAPI(
@@ -69,6 +74,9 @@ app.include_router(engineering.router, prefix="/api/engineering", tags=["Enginee
 
 app.include_router(data_status.router, prefix="/api/data", tags=["Data access"])
 app.include_router(documents.router, prefix="/api/documents", tags=["FIA documents"])
+app.include_router(
+    performance.router, prefix="/api/performance", tags=["Car performance"]
+)
 
 
 @app.get("/api/health")

@@ -21,6 +21,7 @@ import { useApi } from "../hooks/useApi";
 import DataState from "./DataState";
 import StrategyTyres from "./StrategyTyres";
 import FiaDocuments from "./FiaDocuments";
+import PerformanceGrid from "./PerformanceGrid";
 import { Link } from "react-router-dom";
 
 const value = (v: number | null | undefined, digits = 3) =>
@@ -458,20 +459,25 @@ export default function WeekendEvidence({
   year,
   round,
   condition,
+  initialTab,
 }: {
   data: Evidence;
   year: number;
   round: string;
   condition: string;
+  initialTab?: string;
 }) {
   const tabs = [
     "Overview",
+    "Car performance",
     "Pace",
     "Strategy & tyres",
     "Laps & track",
     "Upgrades",
   ];
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState(
+    initialTab === "performance" ? "Car performance" : "Overview",
+  );
   const [practice, setPractice] = useState("FP2"),
     [practicePath, setPracticePath] = useState<string | null>(null);
   const [first, setFirst] = useState(""),
@@ -716,6 +722,9 @@ export default function WeekendEvidence({
               <p className="text-gray">{data.conditions.note}</p>
             </section>
           </>
+        )}
+        {tab === "Car performance" && (
+          <PerformanceGrid year={year} round={round} condition={condition} />
         )}
         {tab === "Pace" && (
           <>

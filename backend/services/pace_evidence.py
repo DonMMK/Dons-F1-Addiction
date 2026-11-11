@@ -102,7 +102,8 @@ def _traffic(session):
     }
 
 
-def eligible_laps(session, condition="slick"):
+def condition_laps(session, condition="slick"):
+    """Quality, weather and condition screening shared by both pace views."""
     laps = clean_laps(session.laps)
     coverage = {
         "recorded": len(session.laps),
@@ -138,6 +139,13 @@ def eligible_laps(session, condition="slick"):
         laps = laps.loc[laps["TrackTemp"].lt(30)]
     elif condition == "warm":
         laps = laps.loc[laps["TrackTemp"].ge(40)]
+    return laps, coverage
+
+
+def eligible_laps(session, condition="slick"):
+    laps, coverage = condition_laps(session, condition)
+    if laps.empty:
+        return laps, coverage
     practice = session.name.startswith("Practice")
     traffic = _traffic(session)
     keep = []
@@ -404,6 +412,7 @@ def ranking(pairs, roster):
         )
         if len(samples):
             samples -= samples.mean(axis=1, keepdims=True)
+        reference = int(np.argmin(scores))
         for i, team in enumerate(teams):
             sector = [
                 np.array([v[c].mean() for c in columns]) if v is not None else None
@@ -414,6 +423,20 @@ def ranking(pairs, roster):
                     "name": team,
                     "component": component_id,
                     **_rank_summary(scores, samples, i),
+                    "referenceTeam": teams[reference],
+                    "gapToReferenceSeconds": number(scores[i] - scores[reference]),
+                    # Use the same bootstrap draw for both teams: subtracting
+                    # two marginal intervals would discard their covariance.
+                    "gapInterval95": (
+                        [
+                            number(v)
+                            for v in np.quantile(
+                                samples[:, i] - samples[:, reference], [0.025, 0.975]
+                            )
+                        ]
+                        if len(samples) >= 100
+                        else None
+                    ),
                     "drivers": roster[team],
                     "rivals": len(teams) - 1,
                     "windows": len(
@@ -457,10 +480,13 @@ def analyse(session, condition="slick"):
         for t, g in session.results.groupby("TeamName")
     }
     driver_pace, team_pace = ranking(pairs, roster)
-    return {
+    result = {
         "condition": condition,
         "session": session.name,
         "coverage": coverage,
+        "normalisationLapSeconds": (
+            number(laps["seconds"].median()) if not laps.empty else None
+        ),
         "warnings": getattr(session, "data_warnings", []),
         "policy": POLICY,
         "teamPace": team_pace,
@@ -479,3 +505,19 @@ def analyse(session, condition="slick"):
             "Disconnected comparison groups cannot be ranked against each other; overlapping intervals remain inconclusive.",
         ],
     }
+    if session.name == "Race":
+        from .pace_bridge import analyse as coverage_estimate
+
+        try:
+            result["coverageEstimate"] = coverage_estimate(session, condition, result)
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Broader pace estimate failed; retaining strict evidence"
+            )
+            result["warnings"] = [
+                *result["warnings"],
+                "Adjusted race-pace estimate could not be prepared; strict evidence is retained.",
+            ]
+    return result

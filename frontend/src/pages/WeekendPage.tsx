@@ -14,26 +14,54 @@ import { useApi } from "../hooks/useApi";
 import SeasonSelect from "../components/SeasonSelect";
 import DataState from "../components/DataState";
 import WeekendEvidence from "../components/WeekendEvidence";
+import { useSearchParams } from "react-router-dom";
 
 const delta = (value: number | null) =>
   value == null
     ? "Insufficient data"
     : `${value > 0 ? "+" : ""}${value.toFixed(3)} s`;
 export default function WeekendPage() {
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [round, setRound] = useState("");
+  const [query] = useSearchParams();
+  const queryYear = Number(query.get("year"));
+  const linkedYear =
+    Number.isInteger(queryYear) &&
+    queryYear >= 2018 &&
+    queryYear <= new Date().getFullYear()
+      ? queryYear
+      : new Date().getFullYear();
+  const linkedRound = /^\d+$/.test(query.get("round") ?? "")
+    ? query.get("round")!
+    : "";
+  const linkedCondition = ["slick", "wet", "cool", "warm", "all"].includes(
+    query.get("condition") ?? "",
+  )
+    ? query.get("condition")!
+    : "slick";
+  const [year, setYear] = useState(linkedYear);
+  const [round, setRound] = useState(linkedRound);
   const [selected, setSelected] = useState(0);
   const [refresh, setRefresh] = useState(0);
-  const [condition, setCondition] = useState("slick");
+  const [condition, setCondition] = useState(linkedCondition);
+  useEffect(() => {
+    setYear(linkedYear);
+    setRound(linkedRound);
+    setCondition(linkedCondition);
+    setSelected(0);
+  }, [linkedYear, linkedRound, linkedCondition]);
   const schedule = useApi<{ events: EventInfo[] }>(`/schedule/${year}`);
   const report = useApi<WeekendResponse>(
     round ? `/weekend/${year}/${round}?condition=${condition}` : null,
     refresh,
   );
   useEffect(() => {
+    if (!schedule.data) return;
     const races = schedule.data?.events.filter((e) => !e.isTesting) ?? [];
     const past = races.filter((e) => new Date(e.date).getTime() <= Date.now());
-    setRound(String((past.at(-1) ?? races[0])?.roundNumber ?? ""));
+    setRound((current) =>
+      races.some((e) => String(e.roundNumber) === current)
+        ? current
+        : String((past.at(-1) ?? races[0])?.roundNumber ?? ""),
+    );
   }, [schedule.data]);
   const team = report.data?.teams[selected];
   return (
@@ -102,11 +130,12 @@ export default function WeekendPage() {
           <h2>{report.data.eventName}</h2>
           {report.data.evidence && (
             <WeekendEvidence
-              key={`${year}-${round}-${condition}`}
+              key={`${year}-${round}-${condition}-${query.get("view") ?? "overview"}`}
               data={report.data.evidence}
               year={year}
               round={round}
               condition={condition}
+              initialTab={query.get("view") ?? undefined}
             />
           )}
           <details className="supporting-evidence">

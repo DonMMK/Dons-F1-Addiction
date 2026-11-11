@@ -806,4 +806,29 @@ body { background: #0d131c; }
     .home-hero .next-session { padding: 1.5rem; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Relative race-pace board. Positions encode measured estimates, not standings. */
+.performance-panel .section-heading { margin-top: 0; }
+.performance-panel h3 { font-size: 1.1rem; margin: .9rem 0 .25rem; }
+.performance-controls { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; margin: 1.2rem 0 .8rem; }
+.performance-controls > label { display: flex; flex-direction: column; gap: .3rem; font-size: .8rem; color: #b7c9dc; }
+.performance-controls .btn { font-size: .75rem; padding: .5rem .75rem; }
+.performance-grid { display: block; width: 100%; min-width: 930px; margin: .8rem 0; }
+.performance-grid-row { cursor: pointer; outline: none; }
+.performance-grid-row:focus-visible > rect:first-child { stroke: #a5ece2; stroke-width: 2; }
+.performance-car { transition: transform 850ms cubic-bezier(.25,.75,.2,1); }
+.performance-reference { color: #c5d7e7; font-size: .85rem; }
+.performance-reference strong { color: #f0f7ff; }
+.performance-caption, .performance-status { font-size: .8rem; color: #a5b8ca; line-height: 1.65; margin: .8rem 0; }
+.performance-status { padding: .7rem 1rem; background: #1a2a39; border-radius: 7px; }
+.performance-focus { padding: 1rem; margin: 1rem 0; border: 1px solid #3a6b6e; border-radius: 8px; background: #1a3039; font-size: .85rem; }
+.performance-unranked { margin: 1rem 0; padding: 1rem; border: 1px dashed #536172; border-radius: 8px; color: #aebdcd; font-size: .82rem; }
+.performance-unranked > div { display: flex; flex-wrap: wrap; gap: .5rem; margin: .7rem 0; }
+.performance-unranked span { display: inline-flex; gap: 1rem; padding: .3rem .65rem; border-radius: 5px; background: #23303f; }
+.performance-history { padding-top: 1rem; border-top: 1px solid #324353; }
+.performance-matrix { min-width: 850px; margin-top: 1rem; }
+.performance-matrix th, .performance-matrix td { font-size: .78rem; }
+.performance-matrix td { text-align: center; min-width: 110px; }
+.performance-matrix small { display: block; color: #b4cbdc; font-size: .75rem; margin-top: .15rem; }
+@media (prefers-reduced-motion: reduce) { .performance-car { transition: none; } }
 @media(prefers-reduced-motion:reduce) {.rank-car {transition:none}.airflow {animation:none}html {scroll-behavior:auto}}

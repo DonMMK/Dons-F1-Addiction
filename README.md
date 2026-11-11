@@ -7,8 +7,8 @@ empirical weekend comparisons, recorded lap replay and auditable race prediction
 
 | Route | What it does |
 | --- | --- |
-| `/` | Driver / constructor standings, previous-round movement, animated schematic championship order, F1 calendar and next session in the viewer's timezone |
-| `/weekend` | Five analysis views: track/weather overview, matched pace, strategy/tyre plots, selected-lap track dominance, FIA upgrades; supporting teammate comparisons |
+| `/` | Latest cached car-performance grid, driver / constructor standings, previous-round movement, animated championship order, F1 calendar and next local session |
+| `/weekend` | Six analysis views: track/weather overview, car-performance grid and recent-weekend matrix, matched pace, strategy/tyre plots, selected-lap track dominance, FIA upgrades; supporting teammate comparisons |
 | `/prediction` | Version descriptions, saved winner distributions, post-race Brier / log-loss scores and trained-iteration validation metrics |
 | `/ghost-car` | Two recorded fastest laps with play / pause / scrub controls and speed, throttle, brake, gear, DRS and cumulative time traces |
 | `/looking-back` | Cited W11 / RB19 / MCL39 engineering context, conceptual car diagrams, signed qualifying advantage and recorded lap comparisons |
@@ -20,6 +20,12 @@ uncertainty and FIA history refresh commands.
 
 See [the free analysis workbench notes](docs/FREE_INSIGHTS_WORKBENCH.md) for the
 competitor comparison, data sources, new views, fuel assumptions and remaining gaps.
+
+See [the car-performance grid notes](docs/CAR_PERFORMANCE_GRID.md) for the
+image-inspired layout, weekly updates, normalisation, uncertainty and coverage rules.
+The default adjusted race-pace view broadens coverage using tyre, race-lap and
+traffic controls. Strict matched evidence remains separate; single-car proxies
+and unsupported team rows are labelled, with per-driver coverage diagnostics.
 
 FIA documents now refresh automatically when the backend starts and while it runs.
 Open Upgrades to see publication/check status and discovered official documents.

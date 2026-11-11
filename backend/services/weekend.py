@@ -314,6 +314,20 @@ def weekend(year, round_number, condition="slick"):
         "execution": execution_report(race, quali),
         "verdict": "A race win does not identify the fastest underlying car. Observed matched pace describes a car-driver package in selected conditions; pure car speed, driver contribution, upgrade gains and bad luck cannot be isolated from these feeds.",
     }
+    if race is not None and evidence["pace"] is not None:
+        from .data import finished
+
+        if finished(race):
+            try:
+                from .performance import get_performance
+
+                get_performance().capture(year, round_number, race, evidence["pace"])
+            except Exception:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Could not cache the performance grid", exc_info=True
+                )
     return {
         "evidence": evidence,
         "year": year,

@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node tests/ui.test.mjs"
+    "test": "node tests/ui.test.mjs",
+    "test:performance": "node tests/performance.test.mjs"
   },
   "dependencies": {
     "ical.js": "^2.2.1",

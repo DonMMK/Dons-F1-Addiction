@@ -5,6 +5,7 @@ import { useApi } from "../hooks/useApi";
 import SeasonSelect from "../components/SeasonSelect";
 import DataState from "../components/DataState";
 import StandingsCircuit from "../components/StandingsCircuit";
+import PerformanceGrid from "../components/PerformanceGrid";
 import CalendarList, {
   browserZone,
   formatEvent,
@@ -41,7 +42,7 @@ export default function HomePage() {
         <h1 className="page__title">The championship picture</h1>
         <p className="page__subtitle">
           Published standings, movement since the previous Grand Prix, and your
-          next lights out.
+          next lights out, alongside observed car-performance evidence.
         </p>
       </div>
       <div className="control-panel control-panel__row">
@@ -107,6 +108,7 @@ export default function HomePage() {
           </span>
         </aside>
       </div>
+      <PerformanceGrid key={year} year={year} compact />
       <DataState {...standings} />
       {standings.data && (
         <>
