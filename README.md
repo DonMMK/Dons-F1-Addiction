@@ -141,3 +141,43 @@ The `formula1-prediction`, `formula1-ghost-car` and `formula1-best-car` tools re
 Install their own requirements to use their desktop / CLI export functionality.
 The website replays fastest laps; the standalone full-race replay is not exposed
 as a web feature in this patch.
+
+
+## AI-Driven Development
+
+Use the command below to generate the code files to do some development
+
+```
+find . \
+  -type f \
+  ! -path '*/node_modules/*' \
+  ! -path '*/.git/*' \
+  ! -path '*/f1-venv/*' \
+  ! -path '*/f1_cache/*' \
+  ! -path '*/cache/*' \
+  ! -path '*/__pycache__/*' \
+  ! -path '*/dist/*' \
+  ! -name 'f1-addiction-llm.txt' \
+  ! -name 'package-lock.json' \
+  \( \
+    -name '*.py' \
+    -o -name '*.ts' \
+    -o -name '*.tsx' \
+    -o -name '*.js' \
+    -o -name '*.jsx' \
+    -o -name '*.json' \
+    -o -name '*.html' \
+    -o -name '*.css' \
+    -o -name '*.md' \
+    -o -name '*.txt' \
+  \) \
+  -print0 |
+while IFS= read -r -d '' file; do
+  echo "============================================================"
+  echo "FILE: $file"
+  echo "============================================================"
+  cat "$file"
+  echo
+  echo
+done > f1-addiction-llm.txt
+```
