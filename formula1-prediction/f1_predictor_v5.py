@@ -191,7 +191,7 @@ class RaceSimulator:
         self.grid = grid_order
         self.gp_name = gp_name
         self.overtake_delta = TrackConfig.get_overtake_delta(gp_name)
-        self.laps = TrackConfig.get_laps.get(gp_name, 58)
+        self.laps = TrackConfig.LAP_COUNTS.get(gp_name, 58)
         self.sc_prob = Config.SC_CHANCE.get(gp_name, Config.SC_CHANCE["DEFAULT"])
 
     def run_simulation(self):

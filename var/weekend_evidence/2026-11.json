@@ -1,0 +1,624 @@
+{
+  "year": 2026,
+  "round": 11,
+  "eventName": "Hungarian Grand Prix",
+  "checkedAt": "2026-11-11T01:14:07.130562+00:00",
+  "indexUrl": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2026-2072/event/Hungarian%20Grand%20Prix",
+  "documents": [
+    {
+      "title": "Doc 63 - Championship Points",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_championship_points.pdf",
+      "published": "Published on 26.07.26 19:30 CET"
+    },
+    {
+      "title": "Doc 62 - Final Race Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_final_race_classification.pdf",
+      "published": "Published on 26.07.26 19:25 CET"
+    },
+    {
+      "title": "Doc 61 - Race Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_race_scrutineering.pdf",
+      "published": "Published on 26.07.26 19:10 CET"
+    },
+    {
+      "title": "Doc 60 - Infringement - Car 11 - Starting procedure infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_11_-_starting_procedure_infringement.pdf",
+      "published": "Published on 26.07.26 18:12 CET"
+    },
+    {
+      "title": "Doc 59 - Infringement - Car 87 - Ignoring blue flags",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_87_-_ignoring_blue_flags.pdf",
+      "published": "Published on 26.07.26 18:05 CET"
+    },
+    {
+      "title": "Doc 58 - Infringement - Race Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "published": "Published on 26.07.26 17:25 CET"
+    },
+    {
+      "title": "Doc 57 - Infringement - Car 44 - Pit lane speeding",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_44_-_pit_lane_speeding.pdf",
+      "published": "Published on 26.07.26 17:16 CET"
+    },
+    {
+      "title": "Doc 56 - Decision - Car 16 - Alleged failure to slow for yellow flags",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_decision_-_car_16_-_alleged_failure_to_slow_for_yellow_flags.pdf",
+      "published": "Published on 26.07.26 17:03 CET"
+    },
+    {
+      "title": "Doc 55 - Provisional Race Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_provisional_race_classification.pdf",
+      "published": "Published on 26.07.26 16:58 CET"
+    },
+    {
+      "title": "Doc 54 - Infringement - Car 55 - Collision with car 81",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_55_-_collision_with_car_81.pdf",
+      "published": "Published on 26.07.26 16:55 CET"
+    },
+    {
+      "title": "Doc 53 - Summons - Car 11 - Starting procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_11_-_starting_procedure.pdf",
+      "published": "Published on 26.07.26 17:19 CET"
+    },
+    {
+      "title": "Doc 52 - Final Starting Grid",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_final_starting_grid.pdf",
+      "published": "Published on 26.07.26 14:00 CET"
+    },
+    {
+      "title": "Doc 50 - Infringement - Car 11 - Changes made under Parc Ferme",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_11_-_changes_made_under_parc_ferme.pdf",
+      "published": "Published on 26.07.26 12:38 CET"
+    },
+    {
+      "title": "Doc 48 - Post-Race Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_post-race_procedure.pdf",
+      "published": "Published on 26.07.26 11:05 CET"
+    },
+    {
+      "title": "Doc 47 - Pre-Race Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_pre-race_procedure.pdf",
+      "published": "Published on 26.07.26 09:56 CET"
+    },
+    {
+      "title": "Doc 46 - Provisional Starting Grid",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_provisional_starting_grid.pdf",
+      "published": "Published on 25.07.26 20:00 CET"
+    },
+    {
+      "title": "Doc 45 - Final Qualifying Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_final_qualifying_classification.pdf",
+      "published": "Published on 25.07.26 19:55 CET"
+    },
+    {
+      "title": "Doc 44 - Decision - Qualifying SC2-SC1 Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_decision_-_qualifying_sc2-sc1_times.pdf",
+      "published": "Published on 25.07.26 19:49 CET"
+    },
+    {
+      "title": "Doc 43 - Infringement - Car 12 - Alleged failure to follow Race Director's instructions (SC2-SC1 Time)",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_12_-_alleged_failure_to_follow_race_directors_instructions_sc2-sc1_time.pdf",
+      "published": "Published on 25.07.26 19:39 CET"
+    },
+    {
+      "title": "Doc 42 - Race Director's Competition Notes V2",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_race_directors_competition_notes_v2.pdf",
+      "published": "Published on 25.07.26 19:32 CET"
+    },
+    {
+      "title": "Doc 41 - Infringement - Car 12 - Yellow flag infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_12_-_yellow_flag_infringement.pdf",
+      "published": "Published on 25.07.26 19:31 CET"
+    },
+    {
+      "title": "Doc 40 - Infringement - Qualifying Deleted Lap Times - Yellow Flags",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_qualifying_deleted_lap_times_-_yellow_flags.pdf",
+      "published": "Published on 25.07.26 18:56 CET"
+    },
+    {
+      "title": "Doc 39 - Infringement - Qualifying Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_qualifying_deleted_lap_times.pdf",
+      "published": "Published on 25.07.26 18:50 CET"
+    },
+    {
+      "title": "Doc 38 - P3 and Qualifying Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_p3_and_qualifying_scrutineering.pdf",
+      "published": "Published on 25.07.26 18:48 CET"
+    },
+    {
+      "title": "Doc 36 - Infringement - Car 44 - Unnecessarily impeding of Car 81",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_44_-_unnecessarily_impeding_of_car_81.pdf",
+      "published": "Published on 25.07.26 18:40 CET"
+    },
+    {
+      "title": "Doc 35 - Summons - Car 12 - Alleged failure to follow Race Director's instructions (SC2-SC1 Time)",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_12_-_alleged_failure_to_follow_race_directors_instructions_sc2-sc1_time.pdf",
+      "published": "Published on 25.07.26 17:55 CET"
+    },
+    {
+      "title": "Doc 34 - Summons - Car 12 - Alleged yellow flag infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_12_-_alleged_yellow_flag_infringement.pdf",
+      "published": "Published on 25.07.26 17:39 CET"
+    },
+    {
+      "title": "Doc 33 - Summons - Car 81 - Alleged impeding by Car 44",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_81_-_alleged_impeding_by_car_44.pdf",
+      "published": "Published on 25.07.26 17:35 CET"
+    },
+    {
+      "title": "Doc 32 - Summons - Car 44 - Alleged impeding of Car 81",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_44_-_alleged_impeding_of_car_81.pdf",
+      "published": "Published on 25.07.26 17:34 CET"
+    },
+    {
+      "title": "Doc 31 - Provisional Qualifying Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_provisional_qualifying_classification.pdf",
+      "published": "Published on 25.07.26 17:21 CET"
+    },
+    {
+      "title": "Doc 29 - Infringement - Free Practice 3 Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_free_practice_3_deleted_lap_times.pdf",
+      "published": "Published on 25.07.26 13:58 CET"
+    },
+    {
+      "title": "Doc 28 - Free Practice 3 Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_free_practice_3_classification.pdf",
+      "published": "Published on 25.07.26 13:58 CET"
+    },
+    {
+      "title": "Doc 27 - Post-Qualifying Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_post-qualifying_procedure.pdf",
+      "published": "Published on 25.07.26 10:31 CET"
+    },
+    {
+      "title": "Doc 26 - Curfew",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_curfew_0.pdf",
+      "published": "Published on 25.07.26 10:31 CET"
+    },
+    {
+      "title": "Doc 25 - P1 and P2 Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_p1_and_p2_scrutineering.pdf",
+      "published": "Published on 24.07.26 19:55 CET"
+    },
+    {
+      "title": "Doc 24 - Race Director Notes - SC2 - SC1 Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_race_director_notes_-_sc2_-_sc1_times.pdf",
+      "published": "Published on 24.07.26 18:34 CET"
+    },
+    {
+      "title": "Doc 23 - Infringement - Free Practice 2 Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_free_practice_2_deleted_lap_times.pdf",
+      "published": "Published on 24.07.26 18:30 CET"
+    },
+    {
+      "title": "Doc 22 - Free Practice 2 Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_free_practice_2_classification.pdf",
+      "published": "Published on 24.07.26 18:30 CET"
+    },
+    {
+      "title": "Doc 21 - Decision - Car 55 - Alleged erratic driving in Turn 9",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_decision_-_car_55_-_alleged_erratic_driving_in_turn_9.pdf",
+      "published": "Published on 24.07.26 16:31 CET"
+    },
+    {
+      "title": "Doc 20 - Decision - Car 3 - Alleged erratic driving in Turn 12",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_decision_-_car_3_-_alleged_erratic_driving_in_turn_12.pdf",
+      "published": "Published on 24.07.26 16:06 CET"
+    },
+    {
+      "title": "Doc 19 - Infringement - Car 55 - Erratic driving in Turn 12",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_55_-_erratic_driving_in_turn_12_0.pdf",
+      "published": "Published on 24.07.26 16:06 CET"
+    },
+    {
+      "title": "Doc 18 - Free Practice 1 Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_free_practice_1_classification.pdf",
+      "published": "Published on 24.07.26 14:51 CET"
+    },
+    {
+      "title": "Doc 17 - Infringement - Free Practice 1 Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_free_practice_1_deleted_lap_times.pdf",
+      "published": "Published on 24.07.26 14:45 CET"
+    },
+    {
+      "title": "Doc 16 - Summons - Car 55 - Alleged erratic driving in turn 9",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_55_-_alleged_erratic_driving_in_turn_9.pdf",
+      "published": "Published on 24.07.26 14:39 CET"
+    },
+    {
+      "title": "Doc 15 - Summons - Car 3 - Alleged erratic driving in turn 12",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_3_-_alleged_erratic_driving_in_turn_12.pdf",
+      "published": "Published on 24.07.26 14:39 CET"
+    },
+    {
+      "title": "Doc 14 - Summons - Car 55 - Alleged erratic driving in turn 12",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_summons_-_car_55_-_alleged_erratic_driving_in_turn_12.pdf",
+      "published": "Published on 24.07.26 14:39 CET"
+    },
+    {
+      "title": "Doc 13 - Infringement - Car 6 - Pit Lane Speeding",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_infringement_-_car_6_-_pit_lane_speeding_.pdf",
+      "published": "Published on 24.07.26 14:11 CET"
+    },
+    {
+      "title": "Doc 12 - New PU Elements for this Competition",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_new_pu_elements_for_this_competition.pdf",
+      "published": "Published on 24.07.26 13:35 CET"
+    },
+    {
+      "title": "Doc 11 - Entry List",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_entry_list.pdf",
+      "published": "Published on 24.07.26 12:54 CET"
+    },
+    {
+      "title": "Doc 10 - Self Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_self_scrutineering.pdf",
+      "published": "Published on 24.07.26 12:54 CET"
+    },
+    {
+      "title": "Doc 9 - Car Presentation Submissions",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+      "published": "Published on 24.07.26 12:54 CET"
+    },
+    {
+      "title": "Doc 8 - Curfew",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_curfew.pdf",
+      "published": "Published on 24.07.26 12:54 CET"
+    },
+    {
+      "title": "Doc 7 - PU Elements used per Driver up to now",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf",
+      "published": "Published on 24.07.26 12:41 CET"
+    },
+    {
+      "title": "Doc 6 - Car Display Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_display_procedure.pdf",
+      "published": "Published on 23.07.26 18:21 CET"
+    },
+    {
+      "title": "Doc 5 - Competition Notes - Circuit Map, Pit Lane Drawing, Emergency Exits Map and Red Zone",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_competition_notes_-_circuit_map_pit_lane_drawing_emergency_exits_map_and_red_zone.pdf",
+      "published": "Published on 23.07.26 17:14 CET"
+    },
+    {
+      "title": "Doc 4 - Race Director's Competition Notes",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_race_directors_competition_notes.pdf",
+      "published": "Published on 23.07.26 17:13 CET"
+    },
+    {
+      "title": "Doc 3 - Power Unit Information",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_power_unit_information.pdf",
+      "published": "Published on 22.07.26 19:37 CET"
+    },
+    {
+      "title": "Doc 2 - Competition Notes - Pirelli Preview",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_competition_notes_-_pirelli_preview.pdf",
+      "published": "Published on 22.07.26 15:15 CET"
+    },
+    {
+      "title": "Doc 1 - Competition Visa",
+      "url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_competition_visa.pdf",
+      "published": "Published on 22.07.26 11:46 CET"
+    }
+  ],
+  "teams": [
+    {
+      "team": "McLaren",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Corner",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Corner",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Corner",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        2
+      ]
+    },
+    {
+      "team": "Mercedes",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Cover",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Tail",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        4
+      ]
+    },
+    {
+      "team": "Red Bull",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        6
+      ]
+    },
+    {
+      "team": "Ferrari",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Endplate",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        8
+      ]
+    },
+    {
+      "team": "Williams",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 10,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 10,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        10
+      ]
+    },
+    {
+      "team": "Racing Bulls",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Roll Hoop",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Cooling",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        12
+      ]
+    },
+    {
+      "team": "Aston Martin",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Endplate",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Nose",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Corner",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Fences",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Edge",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Diffuser",
+          "page": 14,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        14
+      ]
+    },
+    {
+      "team": "Haas F1 Team",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 17,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        17
+      ]
+    },
+    {
+      "team": "Audi",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 19,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        19
+      ]
+    },
+    {
+      "team": "Alpine F1 Team",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        21
+      ]
+    },
+    {
+      "team": "Cadillac",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Corner",
+          "page": 22,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        22
+      ]
+    }
+  ],
+  "submissionStatus": "indexed",
+  "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_car_presentation_submissions.pdf",
+  "documentHash": "59d9c9d893c2f83c50e65abe2be06cfaad56552c5cdecbbca7e0f3b7e4196ace",
+  "parserVersion": 2,
+  "roster": [
+    "Alpine F1 Team",
+    "Aston Martin",
+    "Audi",
+    "Cadillac F1 Team",
+    "Ferrari",
+    "Haas F1 Team",
+    "McLaren",
+    "Mercedes",
+    "RB F1 Team",
+    "Red Bull",
+    "Williams"
+  ]
+}

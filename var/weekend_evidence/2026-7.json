@@ -1,0 +1,585 @@
+{
+  "year": 2026,
+  "round": 7,
+  "eventName": "Barcelona Grand Prix",
+  "checkedAt": "2026-11-11T04:14:53.549835+00:00",
+  "indexUrl": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2026-2072/event/Barcelona-Catalunya%20Grand%20Prix",
+  "documents": [
+    {
+      "title": "Doc 70 - Championship Points",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_championship_points.pdf",
+      "published": "Published on 14.06.26 20:10 CET"
+    },
+    {
+      "title": "Doc 68 - Final Race Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_final_race_classification.pdf",
+      "published": "Published on 14.06.26 19:50 CET"
+    },
+    {
+      "title": "Doc 67 - Infringement - Car 12 - Leaving the track without a justifiable reason multiple times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_12_-_leaving_the_track_without_a_justifiable_reason_multiple_times.pdf",
+      "published": "Published on 14.06.26 19:22 CET"
+    },
+    {
+      "title": "Doc 66 - Infringement - Car 12 - Leaving the track without a justifiable reason",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_12_-_leaving_the_track_without_a_justifiable_reason.pdf",
+      "published": "Published on 14.06.26 19:15 CET"
+    },
+    {
+      "title": "Doc 65 - Race Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_race_scrutineering.pdf",
+      "published": "Published on 14.06.26 19:08 CET"
+    },
+    {
+      "title": "Doc 64 - Infringement - Car 55 - Start Procedure Infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_55_-_start_procedure_infringement.pdf",
+      "published": "Published on 14.06.26 19:08 CET"
+    },
+    {
+      "title": "Doc 63 - Infringement - Car 23 - Start Procedure Infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_23_-_start_procedure_infringement.pdf",
+      "published": "Published on 14.06.26 19:07 CET"
+    },
+    {
+      "title": "Doc 62 - Infringement - Car 43 - Failing to slow for yellow flags",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_43_-_failing_to_slow_for_yellow_flags.pdf",
+      "published": "Published on 14.06.26 19:06 CET"
+    },
+    {
+      "title": "Doc 61 - Infringement - Race Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "published": "Published on 14.06.26 18:15 CET"
+    },
+    {
+      "title": "Doc 60 - Provisional Race Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_provisional_race_classification.pdf",
+      "published": "Published on 14.06.26 16:56 CET"
+    },
+    {
+      "title": "Doc 59 - Summons - Car 43 - Alleged Yellow Flag Infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_summons_-_car_43_-_alleged_yellow_flag_infringement.pdf",
+      "published": "Published on 14.06.26 17:14 CET"
+    },
+    {
+      "title": "Doc 58 - Decision - Car 41 - Alleged leaving the track and gaining an advantage",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_decision_-_car_41_-_alleged_leaving_the_track_and_gaining_an_advantage.pdf",
+      "published": "Published on 14.06.26 17:14 CET"
+    },
+    {
+      "title": "Doc 57 - Decision - Car 27 - Alleged leaving the track and gaining an advantage",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_decision_-_car_27_-_alleged_leaving_the_track_and_gaining_an_advantage.pdf",
+      "published": "Published on 14.06.26 17:13 CET"
+    },
+    {
+      "title": "Doc 56 - Summons - Car 55 - Start Procedure Infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_summons_-_car_55_-_start_procedure_infringement_.pdf",
+      "published": "Published on 14.06.26 16:46 CET"
+    },
+    {
+      "title": "Doc 55 - Summons - Car 23 - Start Procedure Infringement",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_summons_-_car_23_-_start_procedure_infringement_.pdf",
+      "published": "Published on 14.06.26 16:45 CET"
+    },
+    {
+      "title": "Doc 54 - Final Starting Grid",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_final_starting_grid.pdf",
+      "published": "Published on 14.06.26 14:00 CET"
+    },
+    {
+      "title": "Doc 53 - Parts and Parameters been replaced and or changed during Parc Ferm\u00e9",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_parts_and_parameters_been_replaced_and_or_changed_during_parc_ferme.pdf",
+      "published": "Published on 14.06.26 13:52 CET"
+    },
+    {
+      "title": "Doc 52 - Infringement - Car 14 - PU elements and changes used during Parc Ferme",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_14_-_pu_elements_and_changes_used_during_parc_ferme.pdf",
+      "published": "Published on 14.06.26 12:56 CET"
+    },
+    {
+      "title": "Doc 51 - Race Director's Competition Notes V3",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_race_directors_competition_notes_v3.pdf",
+      "published": "Published on 14.06.26 11:44 CET"
+    },
+    {
+      "title": "Doc 50 - Parc Ferm\u00e9 Issues",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_parc_ferme_issues.pdf",
+      "published": "Published on 14.06.26 11:17 CET"
+    },
+    {
+      "title": "Doc 49 - Post-Race Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_post-race_procedure.pdf",
+      "published": "Published on 14.06.26 10:18 CET"
+    },
+    {
+      "title": "Doc 48 - Pre-Race Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_pre-race_procedure.pdf",
+      "published": "Published on 14.06.26 10:17 CET"
+    },
+    {
+      "title": "Doc 47 - Provisional Starting Grid",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_provisional_starting_grid.pdf",
+      "published": "Published on 13.06.26 19:35 CET"
+    },
+    {
+      "title": "Doc 45 - Final Qualifying Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_final_qualifying_classification.pdf",
+      "published": "Published on 13.06.26 19:22 CET"
+    },
+    {
+      "title": "Doc 44 - P3 and Qualifying Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_p3_and_qualifying_scrutineering.pdf",
+      "published": "Published on 13.06.26 19:09 CET"
+    },
+    {
+      "title": "Doc 43 - Decision - Qualifying SC2-SC1 Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_decision_-_qualifying_sc2-sc1_times.pdf",
+      "published": "Published on 13.06.26 17:35 CET"
+    },
+    {
+      "title": "Doc 42 - Infringement - Qualifying Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_qualifying_deleted_lap_times.pdf",
+      "published": "Published on 13.06.26 17:31 CET"
+    },
+    {
+      "title": "Doc 41 - Provisional Qualifying Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_provisional_qualifying_classification.pdf",
+      "published": "Published on 13.06.26 17:25 CET"
+    },
+    {
+      "title": "Doc 40 - Infringement - Car 16 - Impeding of Car 27",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_16_-_impeding_of_car_27.pdf",
+      "published": "Published on 13.06.26 15:38 CET"
+    },
+    {
+      "title": "Doc 39 - Infringement - Car 12 - Driving erratically",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_12_-_driving_erratically.pdf",
+      "published": "Published on 13.06.26 14:36 CET"
+    },
+    {
+      "title": "Doc 38 - Infringement - Free Practice 3 Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_free_practice_3_deleted_lap_times.pdf",
+      "published": "Published on 13.06.26 14:18 CET"
+    },
+    {
+      "title": "Doc 37 - Free Practice 3 Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_free_practice_3_classification.pdf",
+      "published": "Published on 13.06.26 13:55 CET"
+    },
+    {
+      "title": "Doc 36 - Summons - Car 16 - Alleged incident with Car 27 at turn 5",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_summons_-_car_16_-_alleged_incident_with_car_27_at_turn_5.pdf",
+      "published": "Published on 13.06.26 13:52 CET"
+    },
+    {
+      "title": "Doc 35 - Summons - Car 18 - Incident with Car 12 in Turn 2",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_summons_-_car_18_-_incident_with_car_12_in_turn_2.pdf",
+      "published": "Published on 13.06.26 13:51 CET"
+    },
+    {
+      "title": "Doc 34 - Summons - Car 12 - Alleged driving erratically",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_summons_-_car_12_-_alleged_driving_erratically.pdf",
+      "published": "Published on 13.06.26 13:51 CET"
+    },
+    {
+      "title": "Doc 33 - Infringement - Car 18 - Pit Lane Speeding",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_18_-_pit_lane_speeding.pdf",
+      "published": "Published on 13.06.26 13:41 CET"
+    },
+    {
+      "title": "Doc 32 - New PU Elements for this Competition",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_new_pu_elements_for_this_competition_1.pdf",
+      "published": "Published on 13.06.26 12:50 CET"
+    },
+    {
+      "title": "Doc 31 - Power Unit Information V2",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_power_unit_information_v2.pdf",
+      "published": "Published on 13.06.26 11:12 CET"
+    },
+    {
+      "title": "Doc 30 - Post-Qualifying Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_post-qualifying_procedure.pdf",
+      "published": "Published on 13.06.26 10:21 CET"
+    },
+    {
+      "title": "Doc 28 - Curfew",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_curfew.pdf",
+      "published": "Published on 13.06.26 09:50 CET"
+    },
+    {
+      "title": "Doc 27 - Competition Notes - Pirelli Preview V2",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_competition_notes_-_pirelli_preview_v2.pdf",
+      "published": "Published on 13.06.26 08:42 CET"
+    },
+    {
+      "title": "Doc 26 - FP1 and FP2 Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_fp1_and_fp2_scrutineering.pdf",
+      "published": "Published on 12.06.26 19:22 CET"
+    },
+    {
+      "title": "Doc 25 - Timetable V4",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_timetable_v4.pdf",
+      "published": "Published on 12.06.26 18:50 CET"
+    },
+    {
+      "title": "Doc 24 - Race Director Notes - SC2 - SC1 Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_race_director_notes_-_sc2_-_sc1_times.pdf",
+      "published": "Published on 12.06.26 18:28 CET"
+    },
+    {
+      "title": "Doc 23 - Infringement - Free Practice 2 Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_free_practice_2_deleted_lap_times.pdf",
+      "published": "Published on 12.06.26 18:23 CET"
+    },
+    {
+      "title": "Doc 22 - Free Practice 2 Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_free_practice_2_classification.pdf",
+      "published": "Published on 12.06.26 18:20 CET"
+    },
+    {
+      "title": "Doc 21 - Infringement - Car 11 - Pit Lane Speeding",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_11_-_pit_lane_speeding.pdf",
+      "published": "Published on 12.06.26 18:26 CET"
+    },
+    {
+      "title": "Doc 20 - Infringement - Car 77 - Pit Lane Speeding",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_77_-_pit_lane_speeding.pdf",
+      "published": "Published on 12.06.26 18:11 CET"
+    },
+    {
+      "title": "Doc 19 - Infringement - Car 14 - Pit exit incident",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_car_14_-_pit_exit_incident.pdf",
+      "published": "Published on 12.06.26 18:02 CET"
+    },
+    {
+      "title": "Doc 18 - New PU Elements for this Competition",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_new_pu_elements_for_this_competition_0.pdf",
+      "published": "Published on 12.06.26 17:02 CET"
+    },
+    {
+      "title": "Doc 17 - Infringement - Free Practice 1 Deleted Lap Times",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_infringement_-_free_practice_1_deleted_lap_times.pdf",
+      "published": "Published on 12.06.26 15:53 CET"
+    },
+    {
+      "title": "Doc 16 - Free Practice 1 Classification",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_free_practice_1_classification.pdf",
+      "published": "Published on 12.06.26 14:47 CET"
+    },
+    {
+      "title": "Doc 15 - New PU Elements for this Competition",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_new_pu_elements_for_this_competition.pdf",
+      "published": "Published on 12.06.26 14:21 CET"
+    },
+    {
+      "title": "Doc 14 - Car Presentation Submissions",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+      "published": "Published on 12.06.26 11:00 CET"
+    },
+    {
+      "title": "Doc 13 - Entry List",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_entry_list.pdf",
+      "published": "Published on 12.06.26 10:56 CET"
+    },
+    {
+      "title": "Doc 12 - Self Scrutineering",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_self_scrutineering.pdf",
+      "published": "Published on 12.06.26 10:40 CET"
+    },
+    {
+      "title": "Doc 11 - PU elements used per driver up to now",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf",
+      "published": "Published on 12.06.26 11:47 CET"
+    },
+    {
+      "title": "Doc 10 - Timetable V3",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_timetable_v3.pdf",
+      "published": "Published on 11.06.26 18:23 CET"
+    },
+    {
+      "title": "Doc 9 - Race Director's Competition Notes V2",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_race_directors_competition_notes_v2.pdf",
+      "published": "Published on 11.06.26 18:12 CET"
+    },
+    {
+      "title": "Doc 8 - Competition Notes - Circuit Map, Pit Lane Drawing and Emergency Exits Map",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_competition_notes_-_circuit_map_pit_lane_drawing_and_emergency_exits_map.pdf",
+      "published": "Published on 11.06.26 17:59 CET"
+    },
+    {
+      "title": "Doc 7 - Car Display Procedure",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_display_procedure.pdf",
+      "published": "Published on 11.06.26 17:48 CET"
+    },
+    {
+      "title": "Doc 6 - Race Director's Competition Notes",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_race_directors_competition_notes.pdf",
+      "published": "Published on 11.06.26 17:42 CET"
+    },
+    {
+      "title": "Doc 5 - Power Unit Information",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_power_unit_information.pdf",
+      "published": "Published on 11.06.26 16:32 CET"
+    },
+    {
+      "title": "Doc 4 - Post-Race Checks on Car 27, Monaco GP 2026",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_post-race_checks_on_car_27_monaco_gp_2026.pdf",
+      "published": "Published on 10.06.26 17:37 CET"
+    },
+    {
+      "title": "Doc 3 - Competition Notes - Pirelli Preview",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_competition_notes_-_pirelli_preview.pdf",
+      "published": "Published on 10.06.26 17:07 CET"
+    },
+    {
+      "title": "Doc 2 - Timetable V2",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_timetable_v2.pdf",
+      "published": "Published on 10.06.26 15:19 CET"
+    },
+    {
+      "title": "Doc 1 - Competition Visa",
+      "url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_competition_visa.pdf",
+      "published": "Published on 10.06.26 15:17 CET"
+    }
+  ],
+  "teams": [
+    {
+      "team": "McLaren",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 2,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        2
+      ]
+    },
+    {
+      "team": "Mercedes",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 4,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        4
+      ]
+    },
+    {
+      "team": "Red Bull Racing",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing        Lo",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front wing",
+          "page": 6,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        6
+      ]
+    },
+    {
+      "team": "Ferrari",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Front Wing",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Nose",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Body",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Board",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Floor Edge",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Diffuser",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Sidepod/Coke",
+          "page": 8,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        8
+      ]
+    },
+    {
+      "team": "Williams",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Wing",
+          "page": 10,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        10
+      ]
+    },
+    {
+      "team": "Racing Bulls",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Front Wing",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Crash",
+          "page": 12,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        12
+      ]
+    },
+    {
+      "team": "Aston Martin",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        14
+      ]
+    },
+    {
+      "team": "Haas F1 Team",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Rear Impact",
+          "page": 15,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        15
+      ]
+    },
+    {
+      "team": "Audi",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        17
+      ]
+    },
+    {
+      "team": "Alpine",
+      "status": "declared_none",
+      "components": [],
+      "pages": [
+        18
+      ]
+    },
+    {
+      "team": "Cadillac",
+      "status": "declared_updates",
+      "components": [
+        {
+          "component": "Louvres",
+          "page": 19,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        },
+        {
+          "component": "Rear Wing",
+          "page": 19,
+          "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+          "effectSeconds": null,
+          "fitment": "Not verified by this declaration"
+        }
+      ],
+      "pages": [
+        19
+      ]
+    }
+  ],
+  "submissionStatus": "indexed",
+  "sourceUrl": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_car_presentation_submissions.pdf",
+  "documentHash": "26ba7ae0bf3556c02d0ba691fa350f7d56ec08e9d1830ff10b416429a833c7e9",
+  "parserVersion": 2,
+  "roster": [
+    "Alpine",
+    "Aston Martin",
+    "Audi",
+    "Cadillac",
+    "Ferrari",
+    "Haas F1 Team",
+    "McLaren",
+    "Mercedes",
+    "Racing Bulls",
+    "Red Bull Racing",
+    "Williams"
+  ]
+}
