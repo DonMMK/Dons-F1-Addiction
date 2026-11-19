@@ -285,6 +285,21 @@ upstream errors. Keep an off-VM backup of `/var/lib/f1-addiction`. Use SQLite's
 backup facilities or stop the app before copying live database files. To stop
 public access, run `sudo tailscale funnel --https=443 off`, substituting the
 port you used.
+```bash
+cd /home/ubuntu/f1-addiction &&
+git pull --ff-only &&
+.venv/bin/python -m pip install -r backend/requirements.txt &&
+if [ -f frontend/package-lock.json ]; then
+    npm --prefix frontend ci
+else
+    npm --prefix frontend install
+fi &&
+npm --prefix frontend run build &&
+sudo rsync -a frontend/dist/ /srv/f1-addiction/web/ &&
+sudo systemctl restart f1-addiction &&
+curl -fsS --retry 8 --retry-connrefused --retry-delay 1 \
+  http://127.0.0.1:8765/api/health
+```
 
 ## Verify
 
