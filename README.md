@@ -85,6 +85,207 @@ one Uvicorn worker with this in-process job queue; multiple independent workers
 need a shared job store / queue before deployment. Forecast snapshots are durable
 SQLite records, independently of those transient analysis jobs.
 
+## Deploy on an existing Oracle Ubuntu VM
+
+The public link uses **HTTPS port 443** via
+[Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel).
+It works in an ordinary browser and can be forwarded. The VM builds and serves
+React, runs FastAPI and its refresh workers, and stores SQLite locally. Funnel
+is available on the free Personal plan and has bandwidth limits. Use port 8443
+if 443 is assigned to another Tailscale route.
+
+### Check the OCI subscription before deployment
+
+In OCI, check **Billing & Cost Management** for your subscription and **Compute
+→ Instances → your VM** for its shape, boot volume and region. This walkthrough
+reuses those resources. It provisions no additional OCI compute or storage.
+
+- Oracle's [current Free Tier page](https://www.oracle.com/cloud/free/) lists
+  1,500 Ampere A1 OCPU-hours and 9,000 GB-hours of memory per month, equivalent
+  to 2 OCPUs and 12 GB total across A1 instances running all month. A 4 OCPU /
+  24 GB VM can run the app, but do not assume that configuration is free all
+  month. The shape's eligibility label alone does not confirm monthly coverage.
+- Oracle says it will not charge your card on an unupgraded Free Tier account.
+  Resources beyond the Always Free limits can be reclaimed at the end of a
+  trial, and idle Always Free instances may be reclaimed. On Pay As You Go,
+  check **Cost Analysis** and your actual allowance before keeping 4 OCPUs /
+  24 GB running. Installing or limiting the app does not change the provisioned
+  shape. Saving a shape without changes does not change billing.
+- For the conservative Always Free configuration, keep the total A1 allocation
+  at 2 OCPUs / 12 GB or below in the tenancy's home region, total boot and
+  block volume capacity within 200 GB, and outbound transfer within the free
+  allowance. Back up important files off the VM before resizing because a
+  restart may affect existing services. If the current VM already fits your
+  confirmed allowance, leave its shape as it is.
+
+See [Oracle Free Tier and trial rules](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier.htm)
+and [Always Free resource limits](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm).
+
+### 1. Connect to the VM
+
+If you are already at the `ubuntu@jarvis-vnc` prompt, continue with the Ubuntu
+steps below. Otherwise run this on your Mac. Set both placeholders to the
+VM's public IP and your existing key path. Reuse the same OCI SSH key that
+already works for the VM. The `.key` private key stays on your Mac. The
+`.pub` file is for authorizing an SSH account. If SSH already works, skip
+copying either file. Friends use the web link and need no SSH credentials.
+
+```bash
+OCI_HOST=149.118.70.167
+OCI_KEY="$HOME/GitHub/Dons-F1-Addiction/ssh-key-2026-05-17.key"
+chmod 600 "$OCI_KEY"
+ssh -i "$OCI_KEY" -o IdentitiesOnly=yes "ubuntu@$OCI_HOST"
+```
+
+### 2. Build the app on Ubuntu
+
+The examples use `/home/ubuntu/f1-addiction` as the checkout. Keep existing
+repositories and services in their own directories. Check the local listener
+ports first. This guide uses 8765 and 8081. If either is occupied, pick unused
+ports and update their references throughout these steps.
+
+```bash
+sudo ss -ltnp
+sudo apt update
+sudo apt install -y git curl rsync python3-venv caddy
+```
+
+Use Node 24 LTS, for example via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+and `nvm install 24`. Skip the clone if the checkout already exists. For a
+private repo, use your usual repository access. The OCI SSH key only gets
+you into the VM.
+
+```bash
+git clone https://github.com/DonMMK/Dons-F1-Addiction /home/ubuntu/f1-addiction
+cd /home/ubuntu/f1-addiction
+python3 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements.txt
+
+if [ -f frontend/package-lock.json ]; then
+    npm --prefix frontend ci
+else
+    npm --prefix frontend install
+fi
+npm --prefix frontend run build &&
+    sudo install -d -m 0755 /srv/f1-addiction/web &&
+    sudo rsync -a frontend/dist/ /srv/f1-addiction/web/
+```
+
+### 3. Start FastAPI under systemd
+
+Open `sudoedit /etc/systemd/system/f1-addiction.service` and add the unit
+below. Use a single worker for the app's in-process jobs. The state directory
+holds prediction history, trained models, timing caches and refresh data
+outside the checkout.
+
+```ini
+[Unit]
+Description=F1 Addiction API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/f1-addiction
+StateDirectory=f1-addiction
+StateDirectoryMode=0750
+Environment=F1_DATA_DIR=/var/lib/f1-addiction
+ExecStart=/home/ubuntu/f1-addiction/.venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8765 --workers 1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now f1-addiction
+curl -fsS http://127.0.0.1:8765/api/health
+```
+
+### 4. Serve React and the API on the same address
+
+Add this site to `/etc/caddy/Caddyfile` using `sudoedit`. Preserve any existing
+site blocks. On a fresh install, replace the example site. Caddy listens only
+on loopback here. It serves the React build, supports direct links to pages
+like `/weekend`, and proxies `/api/*` with the prefix intact.
+
+For a small preview, use one shared browser password. Run `caddy hash-password`
+and enter a strong password at the prompt. Replace `PASTE_PASSWORD_HASH_HERE`
+with the resulting hash. Use `basicauth` in place of `basic_auth` for Caddy
+before v2.8. The account name is `preview`. For an open preview, omit the
+entire auth block. Anyone reaching that preview can then read shared prediction
+history and submit expensive requests, so use the shared login unless you intend
+to make those available to everyone.
+
+```caddyfile
+:8081 {
+    bind 127.0.0.1
+
+    basic_auth {
+        preview PASTE_PASSWORD_HASH_HERE
+    }
+
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8765 {
+            header_up -Authorization
+        }
+    }
+
+    handle {
+        root * /srv/f1-addiction/web
+        try_files {path} /index.html
+        file_server
+    }
+}
+```
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile &&
+    sudo systemctl enable caddy &&
+    sudo systemctl reload-or-restart caddy
+```
+
+### 5. Publish and verify the HTTPS link
+
+Install [Tailscale on Linux](https://tailscale.com/docs/install/linux) and
+run `sudo tailscale up` if the VM has not already joined your Tailscale
+network. Check both Serve and Funnel status so you can avoid replacing an
+existing route. Enable Funnel on port 443 and follow its admin prompt.
+
+```bash
+sudo tailscale serve status
+sudo tailscale funnel status
+sudo tailscale funnel --bg --https=443 http://127.0.0.1:8081
+sudo tailscale funnel status
+```
+
+Share the exact `https://…ts.net` URL from the output. If you chose 8443,
+replace 443 in the Funnel command and keep `:8443` in the shared URL.
+The public port is on the Funnel endpoint, so this setup needs no new OCI
+inbound rules. Leave the Ubuntu and OCI SSH rules for your own administration.
+Keep Uvicorn and Caddy's local port off the public interface.
+
+On a device without an active Tailscale connection, open the URL, sign in
+if you enabled the preview password, then test `/weekend` and `/api/health`
+on that host. The health URL should return JSON. With the login enabled,
+`/api/health` should also return HTTP 401 when requested without credentials.
+Give friends the link and the preview login over a separate channel if enabled.
+If you prefer a direct OCI endpoint and already have a domain, point an A record
+at the VM, use the hostname in Caddy in place of `:8081`, remove the loopback
+bind in the Caddy site, and allow inbound TCP 80 and 443 on both the VM firewall
+and the instance's OCI security rules. Caddy then handles HTTPS directly.
+Check for an existing reverse proxy before binding those ports.
+
+For updates, pull the approved revision, repeat the dependency install and
+frontend build/copy commands, and run `sudo systemctl restart f1-addiction`.
+Use `sudo journalctl -u f1-addiction -n 100 --no-pager` to check startup or
+upstream errors. Keep an off-VM backup of `/var/lib/f1-addiction`. Use SQLite's
+backup facilities or stop the app before copying live database files. To stop
+public access, run `sudo tailscale funnel --https=443 off`, substituting the
+port you used.
+
 ## Verify
 
 ```bash
