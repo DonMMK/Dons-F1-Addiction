@@ -223,7 +223,7 @@ to make those available to everyone.
 :8081 {
     bind 127.0.0.1
 
-    basic_auth {
+    basicauth {
         preview PASTE_PASSWORD_HASH_HERE
     }
 
