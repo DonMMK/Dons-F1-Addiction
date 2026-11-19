@@ -14,3 +14,5 @@ build/
 *frontend/node_modules/
 
 f1-addiction-llm.txt
+*.key
+*.pub
