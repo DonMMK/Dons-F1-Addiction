@@ -77,7 +77,7 @@ class RaceSimulator:
             row = self.grid_df[self.grid_df["Abbreviation"] == driver_abbr]
             if not row.empty:
                 for q in ["Q3", "Q2", "Q1"]:
-                    val = row[q].values[0]
+                    val = row[q].iloc[0]
                     if pd.notna(val) and val != "":
                         return val.total_seconds()
         except:
@@ -89,7 +89,7 @@ class RaceSimulator:
         try:
             row = self.grid_df[self.grid_df["Abbreviation"] == driver_abbr]
             if not row.empty:
-                val = row["GridPosition"].values[0]
+                val = row["GridPosition"].iloc[0]
                 if pd.notna(val) and val > 0:
                     return int(val)
         except:
@@ -98,7 +98,7 @@ class RaceSimulator:
 
     def run_simulation(self):
         # We need the full grid to calculate traffic
-        grid_list = self.grid_df["Abbreviation"].head(20).tolist()
+        grid_list = self.grid_df["Abbreviation"].head(len(self.grid_df)).tolist()
         results = {d: 0 for d in grid_list}
 
         # --- PHYSICS SETUP ---

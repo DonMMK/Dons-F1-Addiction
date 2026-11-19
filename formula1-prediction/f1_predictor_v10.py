@@ -98,7 +98,7 @@ class RaceSimulator:
             if not row.empty:
                 # Try Q3 -> Q2 -> Q1
                 for q in ["Q3", "Q2", "Q1"]:
-                    val = row[q].values[0]
+                    val = row[q].iloc[0]
                     if pd.notna(val) and val != "":
                         return val.total_seconds()
         except:
@@ -107,7 +107,7 @@ class RaceSimulator:
 
     def run_simulation(self):
         # Get Top 20 Drivers from Grid
-        grid_list = self.grid_df["Abbreviation"].head(20).tolist()
+        grid_list = self.grid_df["Abbreviation"].head(len(self.grid_df)).tolist()
         results = {d: 0 for d in grid_list}
 
         # --- THE V10 "QUALI ANCHOR" LOGIC ---

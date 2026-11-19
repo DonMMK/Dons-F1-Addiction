@@ -59,11 +59,11 @@ class RaceSimulator:
             if not row.empty:
                 for q in ["Q3", "Q2", "Q1"]:
                     if q in row.columns:
-                        val = row[q].values[0]
+                        val = row[q].iloc[0]
                         if pd.notna(val) and val != "":
                             return val.total_seconds()
                 if "LapTime" in row.columns:
-                    val = row["LapTime"].values[0]
+                    val = row["LapTime"].iloc[0]
                     if pd.notna(val): return val.total_seconds()
         except: pass
         return None
@@ -72,7 +72,7 @@ class RaceSimulator:
         try:
             row = self.grid_df[self.grid_df["Abbreviation"] == driver_abbr]
             if not row.empty:
-                val = row["GridPosition"].values[0]
+                val = row["GridPosition"].iloc[0]
                 if pd.notna(val) and val > 0: return int(val)
         except: pass
         return index_fallback + 1

@@ -1,185 +1,268 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useState } from "react";
 import {
-  fetchEras,
-  fetchEraDetail,
-  fetchSeasonProgression,
-  fetchGapToLeader,
-  type EraConfig,
-} from '../api'
-import Spinner from '../components/Spinner'
-import TelemetryChart from '../components/TelemetryChart'
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ReferenceLine,
+  CartesianGrid,
+} from "recharts";
+import type {
+  EraConfig,
+  EngineeringTopic,
+  EventInfo,
+  DriverInfo,
+  ComparisonResponse,
+} from "../api";
+import { useApi } from "../hooks/useApi";
+import { useSeasonAnalysis } from "../hooks/useSeasonAnalysis";
+import DataState from "../components/DataState";
+import EngineeringCar from "../components/EngineeringCar";
+import { ComparisonView } from "./GhostCarPage";
 
+interface Progression {
+  progression: {
+    round: number;
+    race: string;
+    gap: number;
+    gapPercent: number;
+  }[];
+  unavailable: string[];
+  method: string;
+}
 export default function BestCarPage() {
-  const [erasMap, setErasMap] = useState<Record<string, string>>({})
-  const [eraKey, setEraKey] = useState('')
-  const [era, setEra] = useState<EraConfig | null>(null)
-  const [progressionData, setProgressionData] = useState<{ round: number; race: string; gap: number }[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // Gap to leader for a selected race
-  const [gapRace, setGapRace] = useState('')
-  const [gapData, setGapData] = useState<{ driver: string; team: string; gap: number }[]>([])
-  const [gapLoading, setGapLoading] = useState(false)
-
-  // Fetch eras
+  const [eraKey, setEraKey] = useState("2025"),
+    [topic, setTopic] = useState(0),
+    [round, setRound] = useState("");
+  const [first, setFirst] = useState(""),
+    [second, setSecond] = useState(""),
+    [comparisonPath, setComparisonPath] = useState<string | null>(null);
+  const eras = useApi<{ eras: Record<string, string> }>("/best-car/eras");
+  const era = useApi<EraConfig>(`/best-car/era/${eraKey}`);
+  const topics = useApi<{
+    eras: Record<string, EngineeringTopic[]>;
+    note: string;
+  }>("/engineering/topics");
+  const progression = useSeasonAnalysis<Progression>(eraKey);
+  const schedule = useApi<{ events: EventInfo[] }>(
+    era.data ? `/schedule/${era.data.year}` : null,
+  );
+  const drivers = useApi<{ drivers: DriverInfo[] }>(
+    era.data && round ? `/drivers/${era.data.year}/${round}/Q` : null,
+  );
+  const comparison = useApi<ComparisonResponse>(comparisonPath);
+  const active = topics.data?.eras[eraKey]?.[topic];
   useEffect(() => {
-    fetchEras().then((r) => {
-      setErasMap(r.eras)
-      const keys = Object.keys(r.eras)
-      if (keys.length) setEraKey(keys[keys.length - 1])
-    }).catch(() => {})
-  }, [])
-
-  // Fetch era detail + progression
+    setRound(
+      String(
+        schedule.data?.events.find((e) => !e.isTesting)?.roundNumber ?? "",
+      ),
+    );
+  }, [schedule.data]);
   useEffect(() => {
-    if (!eraKey) return
-    setLoading(true)
-    setError('')
-    Promise.all([fetchEraDetail(eraKey), fetchSeasonProgression(eraKey)])
-      .then(([eraRes, progRes]) => {
-        setEra(eraRes)
-        setProgressionData(progRes.progression)
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Load error'))
-      .finally(() => setLoading(false))
-  }, [eraKey])
-
-  // Convert progression for TelemetryChart
-  const chartData = useMemo(
-    () => progressionData.map((p) => ({ distance: p.round, gap: p.gap })),
-    [progressionData],
-  )
-
-  const handleGapLoad = async () => {
-    if (!gapRace || !era) return
-    setGapLoading(true)
-    try {
-      const res = await fetchGapToLeader(era.year, gapRace)
-      setGapData(res.gaps)
-    } catch {
-      /* ignore */
-    } finally {
-      setGapLoading(false)
-    }
-  }
-
+    const list = drivers.data?.drivers ?? [];
+    setFirst(
+      list.find((d) => d.team === era.data?.primaryCar.team)?.abbreviation ??
+        list[0]?.abbreviation ??
+        "",
+    );
+    setSecond(
+      list.find((d) => d.team !== era.data?.primaryCar.team)?.abbreviation ??
+        list[1]?.abbreviation ??
+        "",
+    );
+  }, [drivers.data, era.data]);
+  useEffect(() => setComparisonPath(null), [eraKey, round, first, second]);
   return (
     <>
       <div className="page__header">
-        <h1 className="page__title">Best Car Analysis</h1>
+        <p className="eyebrow">LOOKING BACK</p>
+        <h1 className="page__title">The engineering behind the lap</h1>
         <p className="page__subtitle">
-          Compare dominant cars across eras — qualifying gaps, season progression, and performance
-          metrics.
+          Explore documented design decisions alongside observed performance.
+          Timing evidence shows outcomes; it cannot isolate the effect of a
+          single component.
         </p>
       </div>
-
-      {/* ── Era Selector ──────────────────────────────────────── */}
       <div className="control-panel">
+        <label htmlFor="era">Car / era</label>
+        <select
+          id="era"
+          className="form-select"
+          value={eraKey}
+          onChange={(e) => {
+            setEraKey(e.target.value);
+            setTopic(0);
+            setRound("");
+          }}
+        >
+          {Object.entries(eras.data?.eras ?? {}).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+      </div>
+      <DataState {...era} />
+      <DataState {...topics} />
+      {era.data && (
+        <div className="grid-3">
+          {[era.data.primaryCar, ...era.data.competitors].map((car) => (
+            <article
+              className="model-card"
+              key={car.car}
+              style={{ borderTop: `3px solid ${car.color}` }}
+            >
+              <h2>{car.car}</h2>
+              <p>
+                {car.team} · {car.drivers.join(" / ")}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
+      {active && (
+        <section className="engineering-layout">
+          <EngineeringCar focus={active.id} />
+          <div>
+            <div className="button-group">
+              {topics.data?.eras[eraKey].map((t, i) => (
+                <button
+                  key={t.id}
+                  className={`btn ${topic === i ? "btn--primary" : "btn--secondary"}`}
+                  onClick={() => setTopic(i)}
+                >
+                  {t.id}
+                </button>
+              ))}
+            </div>
+            <h2>{active.title}</h2>
+            <p>{active.documented}</p>
+            <h3>What to inspect in the data</h3>
+            <p>{active.measure}</p>
+            <p className="notice">{active.cannotInfer}</p>
+            <a
+              className="source-link"
+              href={active.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {active.sourceLabel} ↗
+            </a>
+          </div>
+        </section>
+      )}
+      <section className="visual-panel">
+        <h2>Season advantage against the closest rival</h2>
+        <p className="text-gray">
+          Best primary-team Q1 lap minus best other-team Q1 lap. Negative means
+          the primary team was faster. Percentage gaps account for lap length,
+          while circuit and weather effects remain.
+        </p>
+        <DataState {...progression} />
+        {progression.loading && (
+          <p className="text-gray">
+            {progression.progress} · first load downloads the season in the
+            background.
+          </p>
+        )}
+        {progression.data && (
+          <>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={progression.data.progression}>
+                <CartesianGrid stroke="#39394b" />
+                <XAxis
+                  dataKey="round"
+                  label={{
+                    value: "Round",
+                    position: "insideBottom",
+                    offset: -2,
+                  }}
+                />
+                <YAxis unit="%" />
+                <Tooltip
+                  contentStyle={{ background: "#242433" }}
+                  labelFormatter={(v) => `Round ${v}`}
+                />
+                <ReferenceLine y={0} stroke="#ddd" />
+                <Line
+                  name="Gap to rival (%)"
+                  dataKey="gapPercent"
+                  stroke={era.data?.primaryCar.color ?? "#f66"}
+                  dot
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            {progression.data.unavailable.length > 0 && (
+              <p className="notice">
+                Missing rounds: {progression.data.unavailable.join(", ")}. No
+                values were substituted.
+              </p>
+            )}
+          </>
+        )}
+      </section>
+      <section className="visual-panel">
+        <h2>Inspect the recorded laps</h2>
+        <p className="text-gray">
+          Compare any two drivers in the same qualifying session. Their fastest
+          laps may come from different Q segments; use Weekend by Weekend for a
+          shared-segment teammate comparison.
+        </p>
         <div className="control-panel__row">
-          <div className="form-group">
-            <label>Era</label>
-            <select className="form-select" value={eraKey} onChange={(e) => setEraKey(e.target.value)}>
-              {Object.entries(erasMap).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
+          <select
+            aria-label="Historical race"
+            className="form-select"
+            value={round}
+            onChange={(e) => setRound(e.target.value)}
+          >
+            {schedule.data?.events
+              .filter((e) => !e.isTesting)
+              .map((e) => (
+                <option key={e.roundNumber} value={e.roundNumber}>
+                  {e.eventName}
+                </option>
+              ))}
+          </select>
+          {[
+            { value: first, set: setFirst, label: "Historical driver A" },
+            { value: second, set: setSecond, label: "Historical driver B" },
+          ].map((c) => (
+            <select
+              key={c.label}
+              aria-label={c.label}
+              className="form-select"
+              value={c.value}
+              onChange={(e) => c.set(e.target.value)}
+            >
+              {drivers.data?.drivers.map((d) => (
+                <option key={d.abbreviation} value={d.abbreviation}>
+                  {d.abbreviation} · {d.team}
+                </option>
               ))}
             </select>
-          </div>
+          ))}
+          <button
+            className="btn btn--primary"
+            disabled={
+              !era.data || !round || !first || !second || first === second
+            }
+            onClick={() =>
+              setComparisonPath(
+                `/ghost-car/compare/${era.data!.year}/${round}/Q/${first}/${second}`,
+              )
+            }
+          >
+            Load telemetry
+          </button>
         </div>
-      </div>
-
-      {loading && <Spinner text="Loading era data…" />}
-      {error && <p style={{ color: 'var(--f1-red)' }}>⚠ {error}</p>}
-
-      {era && !loading && (
-        <>
-          {/* ── Era Overview Cards ────────────────────────────── */}
-          <div className="grid-3 mb-3">
-            <CarCard label="Primary" car={era.primaryCar} />
-            {era.competitors.map((c) => (
-              <CarCard key={c.team} label="Competitor" car={c} />
-            ))}
-          </div>
-
-          {/* ── Season Progression Chart ──────────────────────── */}
-          {chartData.length > 0 && (
-            <div className="mb-3">
-              <TelemetryChart
-                title={`${era.primaryCar.team} – Qualifying Gap to Leader (s)`}
-                data={chartData}
-                dataKey1="gap"
-                color1={era.primaryCar.color}
-                isArea
-              />
-            </div>
-          )}
-
-          {/* ── Race Gap Lookup ────────────────────────────────── */}
-          <div className="control-panel">
-            <div className="control-panel__row">
-              <div className="form-group">
-                <label>Race (for gap breakdown)</label>
-                <select className="form-select" value={gapRace} onChange={(e) => setGapRace(e.target.value)}>
-                  <option value="">Select a race…</option>
-                  {progressionData.map((p) => (
-                    <option key={p.round} value={p.race}>{p.race}</option>
-                  ))}
-                </select>
-              </div>
-              <button className="btn btn--secondary" onClick={handleGapLoad} disabled={!gapRace || gapLoading}>
-                {gapLoading ? 'Loading…' : 'Load Gaps'}
-              </button>
-            </div>
-          </div>
-
-          {gapData.length > 0 && (
-            <div className="results-panel mt-2">
-              <div className="results-panel__header">
-                <span className="results-panel__title">Gap to Leader — {gapRace}</span>
-              </div>
-              <div className="results-panel__body">
-                <table className="f1-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 48 }}>Pos</th>
-                      <th>Driver</th>
-                      <th>Team</th>
-                      <th>Gap (s)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {gapData.map((g, i) => (
-                      <tr key={g.driver}>
-                        <td className={i < 3 ? `pos-${i + 1}` : ''}>{i + 1}</td>
-                        <td className="font-bold">{g.driver}</td>
-                        <td className="text-gray">{g.team}</td>
-                        <td>{i === 0 ? '—' : `+${g.gap.toFixed(3)}`}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+        <DataState {...schedule} />
+        <DataState {...drivers} />
+        <DataState {...comparison} />
+        {comparison.data && <ComparisonView data={comparison.data} />}
+      </section>
     </>
-  )
-}
-
-function CarCard({ label, car }: { label: string; car: EraConfig['primaryCar'] }) {
-  return (
-    <div className="card">
-      <div className="card__accent" style={{ background: car.color }} />
-      <div className="card__body">
-        <p className="text-gray" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          {label}
-        </p>
-        <h3 className="card__title">{car.car}</h3>
-        <p className="card__text">
-          {car.team} &middot; {car.drivers.join(' / ')}
-        </p>
-      </div>
-    </div>
-  )
+  );
 }

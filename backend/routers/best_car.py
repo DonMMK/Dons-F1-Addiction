@@ -12,9 +12,7 @@ from pathlib import Path
 
 router = APIRouter()
 
-CACHE_DIR = Path(__file__).parent.parent.parent / "formula1-best-car" / "cache"
-CACHE_DIR.mkdir(exist_ok=True)
-fastf1.Cache.enable_cache(str(CACHE_DIR))
+from ..services.data import load_session, CACHE_DIR
 
 # ---------------------------------------------------------------------------
 # ERA configurations – mirrors formula1-best-car/data_loader.py
@@ -23,42 +21,86 @@ ERAS = {
     "2020": {
         "name": "2020 – Mercedes W11 Era",
         "year": 2020,
-        "primaryCar": {"team": "Mercedes", "car": "W11", "drivers": ["HAM", "BOT"], "color": "#00D2BE"},
+        "primaryCar": {
+            "team": "Mercedes",
+            "car": "W11",
+            "drivers": ["HAM", "BOT"],
+            "color": "#00D2BE",
+        },
         "competitors": [
-            {"team": "Red Bull", "car": "RB16", "drivers": ["VER", "ALB"], "color": "#0600EF"},
-            {"team": "Racing Point", "car": "RP20", "drivers": ["PER", "STR"], "color": "#F596C8"},
+            {
+                "team": "Red Bull",
+                "car": "RB16",
+                "drivers": ["VER", "ALB"],
+                "color": "#0600EF",
+            },
+            {
+                "team": "Racing Point",
+                "car": "RP20",
+                "drivers": ["PER", "STR"],
+                "color": "#F596C8",
+            },
         ],
     },
     "2023": {
         "name": "2023 – Red Bull RB19 Era",
         "year": 2023,
-        "primaryCar": {"team": "Red Bull Racing", "car": "RB19", "drivers": ["VER", "PER"], "color": "#3671C6"},
+        "primaryCar": {
+            "team": "Red Bull Racing",
+            "car": "RB19",
+            "drivers": ["VER", "PER"],
+            "color": "#3671C6",
+        },
         "competitors": [
-            {"team": "Mercedes", "car": "W14", "drivers": ["HAM", "RUS"], "color": "#27F4D2"},
-            {"team": "Ferrari", "car": "SF-23", "drivers": ["LEC", "SAI"], "color": "#E8002D"},
+            {
+                "team": "Mercedes",
+                "car": "W14",
+                "drivers": ["HAM", "RUS"],
+                "color": "#27F4D2",
+            },
+            {
+                "team": "Ferrari",
+                "car": "SF-23",
+                "drivers": ["LEC", "SAI"],
+                "color": "#E8002D",
+            },
         ],
     },
     "2025": {
         "name": "2025 – McLaren MCL39 Era",
         "year": 2025,
-        "primaryCar": {"team": "McLaren", "car": "MCL39", "drivers": ["NOR", "PIA"], "color": "#FF8700"},
+        "primaryCar": {
+            "team": "McLaren",
+            "car": "MCL39",
+            "drivers": ["NOR", "PIA"],
+            "color": "#FF8700",
+        },
         "competitors": [
-            {"team": "Mercedes", "car": "W16", "drivers": ["RUS", "ANT"], "color": "#27F4D2"},
-            {"team": "Red Bull Racing", "car": "RB21", "drivers": ["VER", "LAW"], "color": "#3671C6"},
+            {
+                "team": "Mercedes",
+                "car": "W16",
+                "drivers": ["RUS", "ANT"],
+                "color": "#27F4D2",
+            },
+            {
+                "team": "Red Bull Racing",
+                "car": "RB21",
+                "drivers": ["VER", "LAW"],
+                "color": "#3671C6",
+            },
         ],
     },
 }
 
 
 def _load_session(year, race, session_type):
-    session = fastf1.get_session(year, race, session_type)
-    session.load(telemetry=True, laps=True, weather=True, messages=False)
-    return session
+    return load_session(year, race, session_type, results_only=session_type == "Q")
 
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/eras")
 def list_eras():
@@ -79,18 +121,17 @@ def gap_to_leader(year: int, race: str):
     """Qualifying gap-to-leader for a specific race."""
     try:
         session = _load_session(year, race, "Q")
+        # Q1 is a common timing segment; do not compare a Q1 lap to a Q3 lap.
         fastest_laps = []
-        for driver in session.drivers:
-            drv_laps = session.laps.pick_drivers(driver)
-            if drv_laps.empty:
-                continue
-            fl = drv_laps.pick_fastest()
-            if fl is not None and pd.notna(fl["LapTime"]):
-                fastest_laps.append({
-                    "driver": str(fl["Driver"]),
-                    "team": str(fl.get("Team", "")),
-                    "lapTime": fl["LapTime"].total_seconds(),
-                })
+        for _, row in session.results.iterrows():
+            if pd.notna(row.get("Q1")):
+                fastest_laps.append(
+                    {
+                        "driver": str(row["Abbreviation"]),
+                        "team": str(row["TeamName"]),
+                        "lapTime": pd.Timedelta(row["Q1"]).total_seconds(),
+                    }
+                )
 
         if not fastest_laps:
             return {"gaps": []}
@@ -102,12 +143,13 @@ def gap_to_leader(year: int, race: str):
             item["gapPercent"] = round((item["gap"] / leader) * 100, 3) if leader else 0
 
         return {"race": race, "year": year, "gaps": fastest_laps}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/season-progression/{era_key}")
-def season_progression(era_key: str):
+def _season_progression(era_key: str, progress=None):
     """
     Track qualifying gap-to-leader across the season for the primary team.
     Returns list of {round, race, gap} entries.
@@ -120,47 +162,52 @@ def season_progression(era_key: str):
     drivers = era["primaryCar"]["drivers"]
 
     try:
-        schedule = fastf1.get_event_schedule(year)
+        from ..services.events import get_schedule
+
+        schedule = get_schedule(year)
         races = schedule[schedule["EventFormat"] != "testing"]["EventName"].tolist()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    progression = []
+    progression, unavailable = [], []
     for i, race_name in enumerate(races):
+        if progress:
+            progress(i, len(races))
         try:
             session = _load_session(year, race_name, "Q")
-            all_laps = []
-            for drv in session.drivers:
-                dl = session.laps.pick_drivers(drv)
-                if dl.empty:
-                    continue
-                fl = dl.pick_fastest()
-                if fl is not None and pd.notna(fl["LapTime"]):
-                    all_laps.append({"driver": str(fl["Driver"]), "time": fl["LapTime"].total_seconds()})
-
-            if not all_laps:
+            rows = session.results.dropna(subset=["Q1"])
+            primary = rows[rows["TeamName"].eq(era["primaryCar"]["team"])]
+            rivals = rows[~rows["TeamName"].eq(era["primaryCar"]["team"])]
+            if primary.empty or rivals.empty:
+                unavailable.append(race_name)
                 continue
-
-            all_laps.sort(key=lambda x: x["time"])
-            leader_time = all_laps[0]["time"]
-
-            best_gap = None
-            for item in all_laps:
-                if item["driver"] in drivers:
-                    gap = item["time"] - leader_time
-                    if best_gap is None or gap < best_gap:
-                        best_gap = gap
-
-            if best_gap is not None:
-                progression.append({
-                    "round": i + 1,
+            p = primary["Q1"].min().total_seconds()
+            r = rivals["Q1"].min().total_seconds()
+            progression.append(
+                {
+                    "round": int(session.event["RoundNumber"]),
                     "race": race_name,
-                    "gap": round(best_gap, 3),
-                })
+                    "gap": round(p - r, 4),
+                    "gapPercent": round(100 * (p / r - 1), 4),
+                }
+            )
+        except HTTPException as exc:
+            if exc.status_code >= 500:
+                raise
+            unavailable.append(race_name)
         except Exception:
-            continue
-
-    return {"eraKey": era_key, "team": era["primaryCar"]["team"], "progression": progression}
+            unavailable.append(race_name)
+    if progress:
+        progress(len(races), len(races))
+    return {
+        "eraKey": era_key,
+        "team": era["primaryCar"]["team"],
+        "progression": progression,
+        "unavailable": unavailable,
+        "method": "Best primary driver minus fastest other-team Q1 time; negative is an advantage. Q1 controls segment, not track conditions. Percent gaps improve scale comparability, not causal attribution.",
+    }
 
 
 @router.get("/race-pace/{year}/{race}")
@@ -171,22 +218,60 @@ def race_pace(year: int, race: str):
         pace_data = []
 
         for drv in session.drivers:
-            dl = session.laps.pick_drivers(drv).pick_accurate().pick_wo_box()
+            from ..services.data import clean_laps
+
+            dl = clean_laps(session.laps.pick_drivers(drv))
             if dl.empty:
                 continue
             times = dl["LapTime"].dropna()
             if len(times) == 0:
                 continue
-            pace_data.append({
-                "driver": str(drv),
-                "team": str(dl.iloc[0]["Team"]),
-                "avgLapTime": round(times.mean().total_seconds(), 3),
-                "medianLapTime": round(times.median().total_seconds(), 3),
-                "fastestLap": round(times.min().total_seconds(), 3),
-                "laps": len(times),
-            })
+            pace_data.append(
+                {
+                    "driver": str(drv),
+                    "team": str(dl.iloc[0]["Team"]),
+                    "avgLapTime": round(times.mean().total_seconds(), 3),
+                    "medianLapTime": round(times.median().total_seconds(), 3),
+                    "fastestLap": round(times.min().total_seconds(), 3),
+                    "laps": len(times),
+                }
+            )
 
         pace_data.sort(key=lambda x: x["avgLapTime"])
         return {"year": year, "race": race, "pace": pace_data}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/season-progression/{era_key}")
+def season_progression(era_key: str):
+    """Compatibility endpoint; web UI uses the progress-reporting job instead."""
+    return _season_progression(era_key)
+
+
+@router.post("/season-jobs/{era_key}")
+def start_season(era_key: str):
+    from ..services import jobs
+
+    if era_key not in ERAS:
+        raise HTTPException(404, "Era not found")
+    try:
+        return jobs.start(
+            era_key, lambda progress: _season_progression(era_key, progress)
+        )
+    except ValueError as exc:
+        raise HTTPException(429, str(exc)) from exc
+
+
+@router.get("/season-jobs/status/{job_id}")
+def season_status(job_id: str):
+    from ..services import jobs
+
+    result = jobs.get(job_id)
+    if result is None:
+        raise HTTPException(
+            404, "Analysis job expired or server restarted; reload the page"
+        )
+    return result

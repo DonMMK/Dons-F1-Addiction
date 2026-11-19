@@ -14,39 +14,68 @@ from pathlib import Path
 
 router = APIRouter()
 
-CACHE_DIR = Path(__file__).parent.parent.parent / "formula1-ghost-car" / ".fastf1_cache"
-CACHE_DIR.mkdir(exist_ok=True)
-fastf1.Cache.enable_cache(str(CACHE_DIR))
+from ..services.data import load_session, CACHE_DIR, optional_data, number
+from ..services.openf1 import TELEMETRY_NOTE
+
+
+def _provenance(session):
+    warnings = list(getattr(session, "data_warnings", []))
+    if getattr(session, "data_provider", None) == "openf1":
+        warnings.append(TELEMETRY_NOTE)
+    return {
+        "dataSource": getattr(session, "data_source", "FastF1"),
+        "warnings": warnings,
+    }
 
 
 # ---------------------------------------------------------------------------
 # Helpers – reuse data_loader logic without importing the CLI module
 # ---------------------------------------------------------------------------
 
-def _load_session(year: int, round_number: int, session_type: str, test_number: int = None):
-    """Load a FastF1 session with telemetry."""
-    if test_number is not None:
-        session_num = int(session_type[1]) if session_type.startswith("T") else 1
-        session = fastf1.get_testing_session(year, test_number, session_num)
-    else:
-        session = fastf1.get_session(year, round_number, session_type)
-    session.load(telemetry=True, weather=True, messages=False)
-    return session
+
+def _load_session(year, round_number, session_type):
+    return load_session(year, round_number, session_type, telemetry=True)
 
 
 def _telemetry_to_dict(telemetry) -> dict:
     """Convert FastF1 telemetry DataFrame to JSON-safe dict of arrays."""
-    return {
-        "x": telemetry["X"].tolist(),
-        "y": telemetry["Y"].tolist(),
-        "speed": telemetry["Speed"].tolist(),
-        "throttle": telemetry["Throttle"].tolist(),
-        "brake": telemetry["Brake"].astype(float).tolist(),
-        "gear": telemetry["nGear"].tolist(),
-        "distance": telemetry["Distance"].tolist(),
-        "time": telemetry["Time"].dt.total_seconds().tolist(),
-        "drs": telemetry["DRS"].tolist(),
+    required = [
+        "X",
+        "Y",
+        "Speed",
+        "Throttle",
+        "Brake",
+        "nGear",
+        "Distance",
+        "Time",
+    ]
+    telemetry = (
+        telemetry.dropna(subset=required).sort_values("Time").drop_duplicates("Time")
+    )
+    if len(telemetry) < 2:
+        raise HTTPException(404, "Not enough finite telemetry samples")
+    result = {
+        key: telemetry[column].astype(float).tolist()
+        for key, column in {
+            "x": "X",
+            "y": "Y",
+            "speed": "Speed",
+            "throttle": "Throttle",
+            "brake": "Brake",
+            "gear": "nGear",
+            "distance": "Distance",
+        }.items()
     }
+    result["drs"] = [
+        number(v)
+        for v in telemetry.get("DRS", pd.Series(np.nan, index=telemetry.index))
+    ]
+    result["time"] = telemetry["Time"].dt.total_seconds().tolist()
+    if not all(
+        v is None or np.isfinite(v) for values in result.values() for v in values
+    ):
+        raise HTTPException(404, "Telemetry contains non-finite values")
+    return result
 
 
 def _format_lap_time(td) -> str:
@@ -59,6 +88,7 @@ def _format_lap_time(td) -> str:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/track/{year}/{round_number}/{session_type}")
 def get_track_layout(year: int, round_number: int, session_type: str):
@@ -77,12 +107,15 @@ def get_track_layout(year: int, round_number: int, session_type: str):
             ci = session.get_circuit_info()
             circuit_info = {
                 "rotation": float(ci.rotation) if hasattr(ci, "rotation") else 0.0,
-                "corners": ci.corners.to_dict("records") if hasattr(ci, "corners") else [],
+                "corners": (
+                    ci.corners.to_dict("records") if hasattr(ci, "corners") else []
+                ),
             }
         except Exception:
             pass
 
         return {
+            **_provenance(session),
             "track": {"x": tel["X"].tolist(), "y": tel["Y"].tolist()},
             "circuitInfo": circuit_info,
             "eventName": str(session.event.get("EventName", "")),
@@ -109,6 +142,7 @@ def get_fastest_lap(year: int, round_number: int, session_type: str, driver: str
 
         lap_time = fastest["LapTime"]
         return {
+            **_provenance(session),
             "driver": driver,
             "team": str(fastest.get("Team", "Unknown")),
             "lapTime": _format_lap_time(lap_time),
@@ -123,7 +157,9 @@ def get_fastest_lap(year: int, round_number: int, session_type: str, driver: str
 
 
 @router.get("/compare/{year}/{round_number}/{session_type}/{driver1}/{driver2}")
-def compare_drivers(year: int, round_number: int, session_type: str, driver1: str, driver2: str):
+def compare_drivers(
+    year: int, round_number: int, session_type: str, driver1: str, driver2: str
+):
     """Compare fastest laps of two drivers – returns telemetry for both."""
     try:
         session = _load_session(year, round_number, session_type)
@@ -141,14 +177,39 @@ def compare_drivers(year: int, round_number: int, session_type: str, driver1: st
         lap1, tel1 = _get_lap(driver1)
         lap2, tel2 = _get_lap(driver2)
 
-        # Interpolate onto common distance axis for delta chart
-        max_dist = min(tel1["Distance"].max(), tel2["Distance"].max())
-        dist_pts = np.linspace(0, max_dist, 500).tolist()
-        speed1_interp = np.interp(dist_pts, tel1["Distance"].values, tel1["Speed"].values).tolist()
-        speed2_interp = np.interp(dist_pts, tel2["Distance"].values, tel2["Speed"].values).tolist()
-        delta = [round(s1 - s2, 2) for s1, s2 in zip(speed1_interp, speed2_interp)]
+        # Sanitize before interpolation as well as before serialization.
+        clean1, clean2 = _telemetry_to_dict(tel1), _telemetry_to_dict(tel2)
+        max_dist = min(max(clean1["distance"]), max(clean2["distance"]))
+        dist_pts = np.linspace(
+            max(min(clean1["distance"]), min(clean2["distance"])), max_dist, 500
+        ).tolist()
+        comparison = {"distance": dist_pts}
+        for index, clean in enumerate((clean1, clean2), 1):
+            order = np.argsort(clean["distance"])
+            dist = np.asarray(clean["distance"])[order]
+            for channel in ("speed", "throttle", "brake", "gear", "drs", "time"):
+                values = np.asarray(clean[channel])[order]
+                if channel == "time":
+                    values = values - values[0]
+                if channel in ("brake", "gear", "drs"):
+                    indices = np.clip(
+                        np.searchsorted(dist, dist_pts, side="right") - 1,
+                        0,
+                        len(dist) - 1,
+                    )
+                    aligned = values[indices].tolist()
+                else:
+                    aligned = np.interp(dist_pts, dist, values).tolist()
+                comparison[f"{channel}{index}"] = aligned
+        comparison["speedDelta"] = [
+            round(a - b, 3) for a, b in zip(comparison["speed1"], comparison["speed2"])
+        ]
+        comparison["timeDelta"] = [
+            round(a - b, 4) for a, b in zip(comparison["time1"], comparison["time2"])
+        ]
 
         return {
+            **_provenance(session),
             "eventName": str(session.event.get("EventName", "")),
             "driver1": {
                 "abbreviation": driver1,
@@ -156,7 +217,7 @@ def compare_drivers(year: int, round_number: int, session_type: str, driver1: st
                 "lapTime": _format_lap_time(lap1["LapTime"]),
                 "lapTimeSeconds": lap1["LapTime"].total_seconds(),
                 "compound": str(lap1.get("Compound", "")),
-                "telemetry": _telemetry_to_dict(tel1),
+                "telemetry": clean1,
             },
             "driver2": {
                 "abbreviation": driver2,
@@ -164,14 +225,9 @@ def compare_drivers(year: int, round_number: int, session_type: str, driver1: st
                 "lapTime": _format_lap_time(lap2["LapTime"]),
                 "lapTimeSeconds": lap2["LapTime"].total_seconds(),
                 "compound": str(lap2.get("Compound", "")),
-                "telemetry": _telemetry_to_dict(tel2),
+                "telemetry": clean2,
             },
-            "comparison": {
-                "distance": dist_pts,
-                "speed1": speed1_interp,
-                "speed2": speed2_interp,
-                "speedDelta": delta,
-            },
+            "comparison": comparison,
         }
     except HTTPException:
         raise
@@ -183,18 +239,20 @@ def compare_drivers(year: int, round_number: int, session_type: str, driver1: st
 def get_weather(year: int, round_number: int, session_type: str):
     """Return session weather data."""
     try:
-        session = _load_session(year, round_number, session_type)
-        wd = session.weather_data
+        session = load_session(year, round_number, session_type)
+        wd = optional_data(session, "weather_data")
         if wd is None or wd.empty:
             return {"weather": None}
         return {
             "weather": {
-                "airTemp": round(float(wd["AirTemp"].mean()), 1),
-                "trackTemp": round(float(wd["TrackTemp"].mean()), 1),
-                "humidity": round(float(wd["Humidity"].mean()), 1),
-                "windSpeed": round(float(wd["WindSpeed"].mean()), 1),
-                "rainfall": bool(wd["Rainfall"].any()),
+                "airTemp": number(wd["AirTemp"].mean(), 1),
+                "trackTemp": number(wd["TrackTemp"].mean(), 1),
+                "humidity": number(wd["Humidity"].mean(), 1),
+                "windSpeed": number(wd["WindSpeed"].mean(), 1),
+                "rainfall": bool(wd["Rainfall"].dropna().gt(0).any()),
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
